@@ -44,25 +44,18 @@
 
     #panel-toggle-btn {
       background: var(--bg-panel); backdrop-filter: blur(16px);
-      border: 1px solid var(--border-panel); padding: 9px 12px;
-      border-radius: 24px; box-shadow: var(--shadow);
-      color: var(--text-main); cursor: pointer;
-      display: flex; align-items: center; gap: 6px; transition: all 0.25s ease;
+      border: 1px solid var(--border-panel); padding: 6px;
+      border-radius: 50%; box-shadow: var(--shadow);
+      cursor: pointer; display: flex; align-items: center;
+      transition: all 0.25s ease;
     }
 
-    #panel-toggle-btn .layers-icon {
-      width: 19px; height: 19px; display: block;
-      stroke: currentColor; fill: none;
-      stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
-    }
+    #panel-toggle-btn:hover { transform: translateY(-1px); }
 
-    .toggle-icon {
-      width: 8px; height: 8px; border-right: 2px solid var(--text-muted);
-      border-bottom: 2px solid var(--text-muted); transform: rotate(45deg);
-      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); margin-left: 4px;
-    }
-
-    #panel-container.collapsed .toggle-icon { transform: rotate(-135deg); }
+    /* The artwork is a raster inside the SVG and carries its own colours, so it
+       cannot inherit currentColor. It also sits in the middle ~60% of its own
+       30x30 viewBox, hence the generous box. */
+    #panel-toggle-btn .layers-icon { width: 30px; height: 30px; display: block; }
 
     #layer-panel {
       background: var(--bg-panel); backdrop-filter: blur(16px);
@@ -91,7 +84,11 @@
     input:checked + .slider-switch:before { transform: translateX(16px); }
 
     .opacity-value { font-size: 11.5px; font-weight: 600; color: var(--text-muted); min-width: 34px; text-align: right; }
-    .slider-wrapper { margin-top: 8px; display: flex; align-items: center; }
+
+    /* The opacity control only belongs to a layer that is actually switched on. */
+    .opacity-value, .slider-wrapper { display: none; }
+    .control-card:has(input:checked) .opacity-value { display: block; }
+    .control-card:has(input:checked) .slider-wrapper { margin-top: 8px; display: flex; align-items: center; }
     .opacity-slider { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: #e0e0e0; outline: none; }
     .opacity-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); cursor: pointer; }
 
@@ -132,14 +129,7 @@
 
   <div id="panel-container" class="collapsed">
     <button id="panel-toggle-btn" aria-label="რუკის ფენები" title="რუკის ფენები">
-      <!-- Placeholder layers symbol: replace this <svg> with the one from the project
-           folder (keep class="layers-icon" so the sizing and colour rules still apply). -->
-      <svg class="layers-icon" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 2.75 2.75 7.5 12 12.25 21.25 7.5 12 2.75Z"/>
-        <path d="M2.75 12.5 12 17.25 21.25 12.5"/>
-        <path d="M2.75 17 12 21.75 21.25 17"/>
-      </svg>
-      <span class="toggle-icon"></span>
+      <img class="layers-icon" src="advanced%20geospatial%20analysis.svg" alt="" aria-hidden="true">
     </button>
     <div id="layer-panel">
       <div class="layer-scroll-area" id="layer-list"></div>
