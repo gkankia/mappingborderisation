@@ -44,10 +44,16 @@
 
     #panel-toggle-btn {
       background: var(--bg-panel); backdrop-filter: blur(16px);
-      border: 1px solid var(--border-panel); padding: 10px 18px;
-      border-radius: 24px; box-shadow: var(--shadow); font-weight: 600;
-      font-size: 13.5px; color: var(--text-main); cursor: pointer;
-      display: flex; align-items: center; gap: 10px; transition: all 0.25s ease;
+      border: 1px solid var(--border-panel); padding: 9px 12px;
+      border-radius: 24px; box-shadow: var(--shadow);
+      color: var(--text-main); cursor: pointer;
+      display: flex; align-items: center; gap: 6px; transition: all 0.25s ease;
+    }
+
+    #panel-toggle-btn .layers-icon {
+      width: 19px; height: 19px; display: block;
+      stroke: currentColor; fill: none;
+      stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
     }
 
     .toggle-icon {
@@ -71,7 +77,6 @@
       pointer-events: none; height: 0; padding: 0; margin-top: 0; overflow: hidden; border: none;
     }
 
-    #layer-panel h3 { margin: 0 0 14px 0; font-size: 15px; font-weight: 700; }
     .layer-scroll-area { overflow-y: auto; flex: 1 1 auto; min-height: 0; padding-right: 4px; margin-right: -4px; }
     .control-card { background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(0, 0, 0, 0.05); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
     .layer-header { display: flex; justify-content: space-between; align-items: center; }
@@ -112,10 +117,6 @@
     .split-label-left { left: 12px; }
     .split-label-right { right: 12px; }
 
-    .status-banner { margin-top: 10px; padding: 8px 12px; border-radius: 8px; font-size: 11.5px; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.03); color: var(--text-muted); }
-    .status-banner.active { background: rgba(26, 115, 232, 0.08); color: var(--primary); }
-    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; }
-    .status-banner.active .status-dot { background: var(--primary); }
   </style>
 </head>
 <body>
@@ -130,15 +131,19 @@
   </div>
 
   <div id="panel-container" class="collapsed">
-    <button id="panel-toggle-btn">
-      <span>რუკის ფენები</span>
+    <button id="panel-toggle-btn" aria-label="რუკის ფენები" title="რუკის ფენები">
+      <!-- Placeholder layers symbol: replace this <svg> with the one from the project
+           folder (keep class="layers-icon" so the sizing and colour rules still apply). -->
+      <svg class="layers-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 2.75 2.75 7.5 12 12.25 21.25 7.5 12 2.75Z"/>
+        <path d="M2.75 12.5 12 17.25 21.25 12.5"/>
+        <path d="M2.75 17 12 21.75 21.25 17"/>
+      </svg>
       <span class="toggle-icon"></span>
     </button>
     <div id="layer-panel">
-      <h3>ფენების მართვა</h3>
       <div class="layer-scroll-area" id="layer-list"></div>
       <button id="split-btn" disabled>შედარების ჩართვა</button>
-      <div id="status-banner" class="status-banner"><span class="status-dot"></span><span id="status-text">აირჩიეთ 2 ფენა შედარებისთვის</span></div>
     </div>
   </div>
 
@@ -179,16 +184,22 @@
 
     // `studio: true` means the layer already exists in the Studio style and only
     // needs toggling; the rest are added as WMS raster sources at runtime.
+    // `label` names the layer in the control panel (survey year); `scale` is what the
+    // split-view badge shows. `studio: true` means the layer already exists in the
+    // Studio style and only needs toggling.
     const LAYERS_CONFIG = {
-      map1922:   { id: '1922-map',       label: '1922 წლის რუკა',              studio: true },
-      topo10k:   { id: 'wms-topo-10k',   label: 'საბჭოთა ტოპო (1:10,000)',     ws: 'TOPO_10k_1952_2007',  layer: 'TOPO_10000_1952_2007' },
-      topo25k:   { id: 'wms-topo-25k',   label: 'საბჭოთა ტოპო (1:25,000)',     ws: 'TOPO_25k_1953-2004',  layer: 'TOPO_25000_1953-2004' },
-      topo50k:   { id: 'wms-topo-50k',   label: 'საბჭოთა ტოპო (1:50,000)',     ws: 'TOPO_50k_1973-1990',  layer: 'TOPO_50000_1973_1990' },
-      topo100k:  { id: 'wms-topo-100k',  label: 'საბჭოთა ტოპო (1:100,000)',    ws: 'TOPO_100K_1978_1990', layer: 'TOPO_100000' },
-      topo200k:  { id: 'wms-topo-200k',  label: 'საბჭოთა ტოპო (1:200,000)',    ws: 'TOPO_200k_1981_1990', layer: 'TOPO_200000' },
-      topo500k:  { id: 'wms-topo-500k',  label: 'საბჭოთა ტოპო (1:500,000)',    ws: 'TOPO_500k_1989',      layer: 'TOPO_500000' },
-      topo1000k: { id: 'wms-topo-1000k', label: 'საბჭოთა ტოპო (1:1,000,000)',  ws: 'TOPO_1000k_1988-90',  layer: 'TOPO_1000000' }
+      map1922:   { id: '1922-map',       label: '1922 წლის რუკა',       studio: true },
+      topo10k:   { id: 'wms-topo-10k',   label: 'საბჭოთა ტოპო 1952',    scale: '1:10,000',    ws: 'TOPO_10k_1952_2007',  layer: 'TOPO_10000_1952_2007' },
+      topo25k:   { id: 'wms-topo-25k',   label: 'საბჭოთა ტოპო 1953',    scale: '1:25,000',    ws: 'TOPO_25k_1953-2004',  layer: 'TOPO_25000_1953-2004' },
+      topo50k:   { id: 'wms-topo-50k',   label: 'საბჭოთა ტოპო 1973',    scale: '1:50,000',    ws: 'TOPO_50k_1973-1990',  layer: 'TOPO_50000_1973_1990' },
+      topo100k:  { id: 'wms-topo-100k',  label: 'საბჭოთა ტოპო 1978',    scale: '1:100,000',   ws: 'TOPO_100K_1978_1990', layer: 'TOPO_100000' },
+      topo200k:  { id: 'wms-topo-200k',  label: 'საბჭოთა ტოპო 1981',    scale: '1:200,000',   ws: 'TOPO_200k_1981_1990', layer: 'TOPO_200000' },
+      topo500k:  { id: 'wms-topo-500k',  label: 'საბჭოთა ტოპო 1989',    scale: '1:500,000',   ws: 'TOPO_500k_1989',      layer: 'TOPO_500000' },
+      topo1000k: { id: 'wms-topo-1000k', label: 'საბჭოთა ტოპო 1988',    scale: '1:1,000,000', ws: 'TOPO_1000k_1988-90',  layer: 'TOPO_1000000' }
     };
+
+    // The 1922 sheet has no scale, so it falls back to its panel name.
+    const splitLabelFor = cfg => cfg.scale || cfg.label;
 
     // Derive the control ids from the key so markup and config cannot drift apart.
     Object.entries(LAYERS_CONFIG).forEach(([key, cfg]) => {
@@ -224,8 +235,6 @@
     const panelContainer = document.getElementById('panel-container');
     const panelToggleBtn = document.getElementById('panel-toggle-btn');
     const splitBtn = document.getElementById('split-btn');
-    const statusBanner = document.getElementById('status-banner');
-    const statusText = document.getElementById('status-text');
     const splitLabels = document.getElementById('split-labels');
     const leftLabel = document.getElementById('left-label');
     const rightLabel = document.getElementById('right-label');
@@ -283,7 +292,6 @@
             leftMap.setLayoutProperty(cfg.id, 'visibility', isChecked ? 'visible' : 'none');
           }
         });
-        statusText.textContent = selectedKeys.length === 2 ? 'მზადაა შედარებისთვის' : 'აირჩიეთ 2 ფენა';
       }
     }
 
@@ -315,14 +323,12 @@
         applySplitVisibilities(selectedKeys);
         compareInstance = new mapboxgl.Compare(leftMap, rightMap, '#map-wrapper', {});
       }
-      statusBanner.classList.add('active');
-      statusText.textContent = 'ორმაგი ეკრანი ჩართულია';
     }
 
     function applySplitVisibilities(selectedKeys) {
       const [leftKey, rightKey] = selectedKeys;
-      leftLabel.textContent = LAYERS_CONFIG[leftKey].label;
-      rightLabel.textContent = LAYERS_CONFIG[rightKey].label;
+      leftLabel.textContent = splitLabelFor(LAYERS_CONFIG[leftKey]);
+      rightLabel.textContent = splitLabelFor(LAYERS_CONFIG[rightKey]);
       Object.keys(LAYERS_CONFIG).forEach(key => {
         const id = LAYERS_CONFIG[key].id;
         if (leftMap.getLayer(id)) leftMap.setLayoutProperty(id, 'visibility', key === leftKey ? 'visible' : 'none');
@@ -339,7 +345,6 @@
       splitLabels.classList.remove('active');
       updateUIState();
       leftMap.resize();
-      statusBanner.classList.remove('active');
     }
 
     Object.keys(LAYERS_CONFIG).forEach(key => {
