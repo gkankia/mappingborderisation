@@ -6,16 +6,13 @@
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
   <link rel="icon" href="data:," />
 
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Noto+Sans+Georgian:wght@400;500;700&display=swap" rel="stylesheet">
 
-  <!-- Mapbox GL JS -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet" />
 
-  <!-- Mapbox GL Compare Plugin -->
   <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.js"></script>
   <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.css" type="text/css" />
 
@@ -31,275 +28,76 @@
     }
 
     body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Google Sans', 'Noto Sans Georgian', -apple-system, BlinkMacSystemFont, sans-serif;
-      color: var(--text-main);
-      background-color: #0e1726;
-      -webkit-font-smoothing: antialiased;
+      margin: 0; padding: 0;
+      font-family: 'Google Sans', 'Noto Sans Georgian', sans-serif;
+      color: var(--text-main); background-color: #0e1726;
     }
 
     #map-wrapper { position: absolute; top: 0; bottom: 0; width: 100%; }
     .map { position: absolute; top: 0; bottom: 0; width: 100%; }
     #right-map { display: none; }
 
-    /* Floating Panel Wrapper */
     #panel-container {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
+      position: absolute; top: 20px; right: 20px; z-index: 10;
+      display: flex; flex-direction: column; align-items: flex-end;
     }
 
     #panel-toggle-btn {
-      background: var(--bg-panel);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--border-panel);
-      padding: 10px 18px;
-      border-radius: 24px;
-      box-shadow: var(--shadow);
-      font-weight: 600;
-      font-size: 13.5px;
-      color: var(--text-main);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      user-select: none;
-      transition: all 0.25s ease;
-    }
-
-    #panel-toggle-btn:hover {
-      background: #ffffff;
-      transform: translateY(-1px);
+      background: var(--bg-panel); backdrop-filter: blur(16px);
+      border: 1px solid var(--border-panel); padding: 10px 18px;
+      border-radius: 24px; box-shadow: var(--shadow); font-weight: 600;
+      font-size: 13.5px; color: var(--text-main); cursor: pointer;
+      display: flex; align-items: center; gap: 10px; transition: all 0.25s ease;
     }
 
     .toggle-icon {
-      width: 8px;
-      height: 8px;
-      border-right: 2px solid var(--text-muted);
-      border-bottom: 2px solid var(--text-muted);
-      transform: rotate(45deg);
-      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      margin-left: 4px;
+      width: 8px; height: 8px; border-right: 2px solid var(--text-muted);
+      border-bottom: 2px solid var(--text-muted); transform: rotate(45deg);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); margin-left: 4px;
     }
 
-    #panel-container.collapsed .toggle-icon {
-      transform: rotate(-135deg);
-    }
+    #panel-container.collapsed .toggle-icon { transform: rotate(-135deg); }
 
     #layer-panel {
-      background: var(--bg-panel);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--border-panel);
-      padding: 20px;
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      width: 340px;
-      max-height: 80vh;
-      display: flex;
-      flex-direction: column;
-      box-sizing: border-box;
-      margin-top: 10px;
-      opacity: 1;
-      visibility: visible;
-      transform: translateY(0);
-      transform-origin: top right;
-      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      background: var(--bg-panel); backdrop-filter: blur(16px);
+      border: 1px solid var(--border-panel); padding: 20px;
+      border-radius: var(--radius); box-shadow: var(--shadow); width: 340px;
+      max-height: 80vh; display: flex; flex-direction: column; box-sizing: border-box;
+      margin-top: 10px; transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     #panel-container.collapsed #layer-panel {
-      opacity: 0;
-      visibility: hidden;
-      transform: translateY(-12px);
-      pointer-events: none;
-      height: 0;
-      padding-top: 0;
-      padding-bottom: 0;
-      margin-top: 0;
-      overflow: hidden;
-      border: none;
+      opacity: 0; visibility: hidden; transform: translateY(-12px);
+      pointer-events: none; height: 0; padding: 0; margin-top: 0; overflow: hidden; border: none;
     }
 
-    #layer-panel h3 {
-      margin: 0 0 14px 0;
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: -0.2px;
-      color: var(--text-main);
-    }
+    #layer-panel h3 { margin: 0 0 14px 0; font-size: 15px; font-weight: 700; }
+    .layer-scroll-area { overflow-y: auto; padding-right: 4px; margin-right: -4px; }
+    .control-card { background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(0, 0, 0, 0.05); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+    .layer-header { display: flex; justify-content: space-between; align-items: center; }
+    .layer-title-group { display: flex; align-items: center; gap: 10px; }
+    .layer-name { font-weight: 500; font-size: 13px; }
 
-    .layer-scroll-area {
-      overflow-y: auto;
-      padding-right: 4px;
-      margin-right: -4px;
-    }
-
-    .control-card {
-      background: rgba(255, 255, 255, 0.7);
-      border: 1px solid rgba(0, 0, 0, 0.05);
-      border-radius: 12px;
-      padding: 10px 12px;
-      margin-bottom: 10px;
-    }
-
-    .control-card:last-of-type { margin-bottom: 0; }
-
-    .layer-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .layer-title-group {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .layer-name {
-      font-weight: 500;
-      font-size: 13px;
-      color: var(--text-main);
-    }
-
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 36px;
-      height: 20px;
-      flex-shrink: 0;
-    }
-
+    .switch { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
     .switch input { opacity: 0; width: 0; height: 0; }
-
-    .slider-switch {
-      position: absolute;
-      cursor: pointer;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #bdc1c6;
-      transition: .25s ease;
-      border-radius: 20px;
-    }
-
-    .slider-switch:before {
-      position: absolute;
-      content: "";
-      height: 14px;
-      width: 14px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      transition: .25s ease;
-      border-radius: 50%;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-    }
-
+    .slider-switch { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #bdc1c6; transition: .25s; border-radius: 20px; }
+    .slider-switch:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .25s; border-radius: 50%; }
     input:checked + .slider-switch { background-color: var(--primary); }
     input:checked + .slider-switch:before { transform: translateX(16px); }
 
-    .opacity-value {
-      font-size: 11.5px;
-      font-weight: 600;
-      color: var(--text-muted);
-      min-width: 34px;
-      text-align: right;
-    }
+    .opacity-value { font-size: 11.5px; font-weight: 600; color: var(--text-muted); min-width: 34px; text-align: right; }
+    .slider-wrapper { margin-top: 8px; display: flex; align-items: center; }
+    .opacity-slider { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: #e0e0e0; outline: none; }
+    .opacity-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); cursor: pointer; }
 
-    .slider-wrapper {
-      margin-top: 8px;
-      display: flex;
-      align-items: center;
-    }
+    #split-btn { width: 100%; margin-top: 12px; padding: 10px 14px; border-radius: 10px; border: none; background-color: #e8f0fe; color: var(--primary); font-weight: 600; font-size: 13px; cursor: pointer; }
+    #split-btn:disabled { background-color: #f1f3f4; color: #3c4043; opacity: 0.6; cursor: not-allowed; }
+    #split-btn.active { background-color: #d93025; color: #ffffff; }
 
-    .opacity-slider {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 100%;
-      height: 4px;
-      border-radius: 2px;
-      background: #e0e0e0;
-      outline: none;
-    }
-
-    .opacity-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--primary);
-      cursor: pointer;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-
-    #split-btn {
-      width: 100%;
-      margin-top: 12px;
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: none;
-      background-color: #e8f0fe;
-      color: var(--primary);
-      font-weight: 600;
-      font-size: 13px;
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    #split-btn:hover:not(:disabled) {
-      background-color: var(--primary);
-      color: #ffffff;
-      box-shadow: 0 4px 12px rgba(26, 115, 232, 0.25);
-    }
-
-    #split-btn:disabled {
-      background-color: #f1f3f4;
-      color: #3c4043;
-      cursor: not-allowed;
-      opacity: 0.6;
-    }
-
-    #split-btn.active {
-      background-color: #d93025;
-      color: #ffffff;
-    }
-
-    .status-banner {
-      margin-top: 10px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 11.5px;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(0,0,0,0.03);
-      color: var(--text-muted);
-    }
-
-    .status-banner.active {
-      background: rgba(26, 115, 232, 0.08);
-      color: var(--primary);
-    }
-
-    .status-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: #ccc;
-    }
-
-    .status-banner.active .status-dot {
-      background: var(--primary);
-      box-shadow: 0 0 8px var(--primary);
-    }
+    .status-banner { margin-top: 10px; padding: 8px 12px; border-radius: 8px; font-size: 11.5px; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.03); color: var(--text-muted); }
+    .status-banner.active { background: rgba(26, 115, 232, 0.08); color: var(--primary); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; }
+    .status-banner.active .status-dot { background: var(--primary); }
   </style>
 </head>
 <body>
@@ -314,266 +112,101 @@
       <span>რუკის ფენები</span>
       <span class="toggle-icon"></span>
     </button>
-
     <div id="layer-panel">
       <h3>ფენების მართვა</h3>
-
       <div class="layer-scroll-area">
-        <!-- 1922 Raster -->
         <div class="control-card">
           <div class="layer-header">
             <div class="layer-title-group">
-              <label class="switch">
-                <input type="checkbox" id="toggle-layer1">
-                <span class="slider-switch"></span>
-              </label>
-              <span class="layer-name">1922 წლის რუკა</span>
-            </div>
-            <span id="val-layer1" class="opacity-value">100%</span>
-          </div>
-          <div class="slider-wrapper">
-            <input type="range" id="opacity-layer1" class="opacity-slider" min="0" max="100" value="100">
-          </div>
-        </div>
-
-        <!-- WMS 1 (1:10 000) -->
-        <div class="control-card">
-          <div class="layer-header">
-            <div class="layer-title-group">
-              <label class="switch">
-                <input type="checkbox" id="toggle-topo10k">
-                <span class="slider-switch"></span>
-              </label>
-              <span class="layer-name">საბჭოთა ტოპო 1952 (1:10 000)</span>
+              <label class="switch"><input type="checkbox" id="toggle-topo10k"><span class="slider-switch"></span></label>
+              <span class="layer-name">საბჭოთა ტოპო (1:10,000)</span>
             </div>
             <span id="val-topo10k" class="opacity-value">100%</span>
           </div>
-          <div class="slider-wrapper">
-            <input type="range" id="opacity-topo10k" class="opacity-slider" min="0" max="100" value="100">
-          </div>
+          <div class="slider-wrapper"><input type="range" id="opacity-topo10k" class="opacity-slider" min="0" max="100" value="100"></div>
         </div>
-
-        <!-- WMS 2 (1:25 000) -->
         <div class="control-card">
           <div class="layer-header">
             <div class="layer-title-group">
-              <label class="switch">
-                <input type="checkbox" id="toggle-topo25k">
-                <span class="slider-switch"></span>
-              </label>
-              <span class="layer-name">საბჭოთა ტოპო 1953 (1:25 000)</span>
-            </div>
-            <span id="val-topo25k" class="opacity-value">100%</span>
-          </div>
-          <div class="slider-wrapper">
-            <input type="range" id="opacity-topo25k" class="opacity-slider" min="0" max="100" value="100">
-          </div>
-        </div>
-
-        <!-- WMS 3 (1:50 000) -->
-        <div class="control-card">
-          <div class="layer-header">
-            <div class="layer-title-group">
-              <label class="switch">
-                <input type="checkbox" id="toggle-topo50k">
-                <span class="slider-switch"></span>
-              </label>
-              <span class="layer-name">საბჭოთა ტოპო 1973 (1:50 000)</span>
+              <label class="switch"><input type="checkbox" id="toggle-topo50k"><span class="slider-switch"></span></label>
+              <span class="layer-name">საბჭოთა ტოპო (1:50,000)</span>
             </div>
             <span id="val-topo50k" class="opacity-value">100%</span>
           </div>
-          <div class="slider-wrapper">
-            <input type="range" id="opacity-topo50k" class="opacity-slider" min="0" max="100" value="100">
-          </div>
+          <div class="slider-wrapper"><input type="range" id="opacity-topo50k" class="opacity-slider" min="0" max="100" value="100"></div>
         </div>
-
-        <!-- WMS 4 (1:100 000) -->
         <div class="control-card">
           <div class="layer-header">
             <div class="layer-title-group">
-              <label class="switch">
-                <input type="checkbox" id="toggle-topo100k">
-                <span class="slider-switch"></span>
-              </label>
-              <span class="layer-name">საბჭოთა ტოპო 1978 (1:100 000)</span>
-            </div>
-            <span id="val-topo100k" class="opacity-value">100%</span>
-          </div>
-          <div class="slider-wrapper">
-            <input type="range" id="opacity-topo100k" class="opacity-slider" min="0" max="100" value="100">
-          </div>
-        </div>
-
-        <!-- WMS 5 (1:200 000) -->
-        <div class="control-card">
-          <div class="layer-header">
-            <div class="layer-title-group">
-              <label class="switch">
-                <input type="checkbox" id="toggle-topo200k">
-                <span class="slider-switch"></span>
-              </label>
-              <span class="layer-name">საბჭოთა ტოპო 1981 (1:200 000)</span>
-            </div>
-            <span id="val-topo200k" class="opacity-value">100%</span>
-          </div>
-          <div class="slider-wrapper">
-            <input type="range" id="opacity-topo200k" class="opacity-slider" min="0" max="100" value="100">
-          </div>
-        </div>
-
-        <!-- WMS 6 (1:500 000) -->
-        <div class="control-card">
-          <div class="layer-header">
-            <div class="layer-title-group">
-              <label class="switch">
-                <input type="checkbox" id="toggle-topo500k">
-                <span class="slider-switch"></span>
-              </label>
-              <span class="layer-name">საბჭოთა ტოპო 1989 (1:500 000)</span>
-            </div>
-            <span id="val-topo500k" class="opacity-value">100%</span>
-          </div>
-          <div class="slider-wrapper">
-            <input type="range" id="opacity-topo500k" class="opacity-slider" min="0" max="100" value="100">
-          </div>
-        </div>
-
-        <!-- WMS 7 (1:1 000 000) -->
-        <div class="control-card">
-          <div class="layer-header">
-            <div class="layer-title-group">
-              <label class="switch">
-                <input type="checkbox" id="toggle-topo1000k">
-                <span class="slider-switch"></span>
-              </label>
-              <span class="layer-name">საბჭოთა ტოპო 1988 (1:1 000 000)</span>
+              <label class="switch"><input type="checkbox" id="toggle-topo1000k"><span class="slider-switch"></span></label>
+              <span class="layer-name">საბჭოთა ტოპო (1:1,000,000)</span>
             </div>
             <span id="val-topo1000k" class="opacity-value">100%</span>
           </div>
-          <div class="slider-wrapper">
-            <input type="range" id="opacity-topo1000k" class="opacity-slider" min="0" max="100" value="100">
-          </div>
+          <div class="slider-wrapper"><input type="range" id="opacity-topo1000k" class="opacity-slider" min="0" max="100" value="100"></div>
         </div>
       </div>
-
-      <button id="split-btn" disabled>
-        შედარების ჩართვა
-      </button>
-
-      <div id="status-banner" class="status-banner">
-        <span class="status-dot"></span>
-        <span id="status-text">აირჩიეთ 2 ფენა შედარებისთვის</span>
-      </div>
+      <button id="split-btn" disabled>შედარების ჩართვა</button>
+      <div id="status-banner" class="status-banner"><span class="status-dot"></span><span id="status-text">აირჩიეთ 2 ფენა შედარებისთვის</span></div>
     </div>
   </div>
 
   <script>
-    mapboxgl.accessToken = 'pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNrZ3R6M2FvdTBwbmwycXBibGRqM2w2enYifQ.BxjvFSGqefuC9yFCrXC-nQ';
+    mapboxgl.accessToken = 'pk.eyJ1Ijoiam9yam9uZTkwIiw5YSI6ImNrZ3R6M2FvdTBwbmwycXBibGRqM2w2enYifQ.BxjvFSGqefuC9yFCrXC-nQ';
     const STYLE_URL = 'mapbox://styles/jorjone90/cmt0iv5hs001101sgcqdrhheh';
-
-    // Layer extent in EPSG:4326 [minLng, minLat, maxLng, maxLat]
     const GEORGIA_BOUNDS = [41.5926, 41.0020, 46.8671, 42.4330];
 
-    function buildWmsUrl(getMapEndpoint, layerName) {
-      const cleanBase = getMapEndpoint.split('?')[0];
-      // Updated to HTTPS to avoid Mixed Content restrictions
-      const httpsBase = cleanBase.replace('http://', 'https://');
-      return `${httpsBase}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=${layerName}&FORMAT=image/png&TRANSPARENT=TRUE&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256`;
+    // Points directly to the Netlify serverless proxy route defined in netlify.toml
+    function buildWmsUrl(layerName) {
+      const queryParams = new URLSearchParams({
+        SERVICE: 'WMS',
+        VERSION: '1.1.1',
+        REQUEST: 'GetMap',
+        LAYERS: layerName,
+        FORMAT: 'image/png',
+        TRANSPARENT: 'TRUE',
+        SRS: 'EPSG:3857',
+        WIDTH: '256',
+        HEIGHT: '256'
+      });
+      return `/api/wms-proxy?${queryParams.toString()}&BBOX={bbox-epsg-3857}`;
     }
 
     const LAYERS_CONFIG = {
-      layer1: { 
-        id: '1922-map', 
-        type: 'mapbox-raster', 
-        toggleId: 'toggle-layer1', 
-        opacityId: 'opacity-layer1', 
-        valId: 'val-layer1' 
-      },
       topo10k: { 
         id: 'wms-topo-10k', 
-        type: 'wms', 
-        url: buildWmsUrl('https://mp1.napr.gov.ge/TOPO_10k_1952_2007/service', 'TOPO_10000_1952_2007'), 
+        url: buildWmsUrl('TOPO_10000_1952_2007'), 
         toggleId: 'toggle-topo10k', 
         opacityId: 'opacity-topo10k', 
         valId: 'val-topo10k' 
       },
-      topo25k: { 
-        id: 'wms-topo-25k', 
-        type: 'wms', 
-        url: buildWmsUrl('https://mp1.napr.gov.ge/TOPO_25k_1953-2004/service', 'TOPO_25000_1953_2004'), 
-        toggleId: 'toggle-topo25k', 
-        opacityId: 'opacity-topo25k', 
-        valId: 'val-topo25k' 
-      },
       topo50k: { 
         id: 'wms-topo-50k', 
-        type: 'wms', 
-        url: buildWmsUrl('https://mp1.napr.gov.ge/TOPO_50k_1973-1990/service', 'TOPO_50000_1973_1990'), 
+        url: buildWmsUrl('TOPO_50000_1973_1990'), 
         toggleId: 'toggle-topo50k', 
         opacityId: 'opacity-topo50k', 
         valId: 'val-topo50k' 
       },
-      topo100k: { 
-        id: 'wms-topo-100k', 
-        type: 'wms', 
-        url: buildWmsUrl('https://mp1.napr.gov.ge/TOPO_100K_1978_1990/service', 'TOPO_100000_1978_1990'), 
-        toggleId: 'toggle-topo100k', 
-        opacityId: 'opacity-topo100k', 
-        valId: 'val-topo100k' 
-      },
-      topo200k: { 
-        id: 'wms-topo-200k', 
-        type: 'wms', 
-        url: buildWmsUrl('https://mp1.napr.gov.ge/TOPO_200k_1981_1990/service', 'TOPO_200000_1981_1990'), 
-        toggleId: 'toggle-topo200k', 
-        opacityId: 'opacity-topo200k', 
-        valId: 'val-topo200k' 
-      },
-      topo500k: { 
-        id: 'wms-topo-500k', 
-        type: 'wms', 
-        url: buildWmsUrl('https://mp1.napr.gov.ge/TOPO_500k_1989/service', 'TOPO_500000_1989'), 
-        toggleId: 'toggle-topo500k', 
-        opacityId: 'opacity-topo500k', 
-        valId: 'val-topo500k' 
-      },
       topo1000k: { 
         id: 'wms-topo-1000k', 
-        type: 'wms', 
-        url: buildWmsUrl('https://mp1.napr.gov.ge/TOPO_1000k_1988-90/service', 'TOPO_1000000_1988_1990'), 
+        url: buildWmsUrl('TOPO_1000000_1988_1990'), 
         toggleId: 'toggle-topo1000k', 
         opacityId: 'opacity-topo1000k', 
         valId: 'val-topo1000k' 
       }
     };
 
-    const initialCenter = [43.290225, 42.375224]; 
-    const initialZoom = 7;
-
     const leftMap = new mapboxgl.Map({
       container: 'left-map',
       style: STYLE_URL,
-      center: initialCenter,
-      zoom: initialZoom
-    });
-
-    // Sanitize lights configuration in Mapbox Style JSON to prevent shadow-quality warnings
-    leftMap.on('style.load', () => {
-      const style = leftMap.getStyle();
-      if (style.lights) {
-        style.lights.forEach(light => {
-          if (light.properties && light.properties['shadow-quality']) {
-            delete light.properties['shadow-quality'];
-          }
-        });
-      }
+      center: [43.290225, 42.375224],
+      zoom: 7
     });
 
     let rightMap = null;
     let compareInstance = null;
     let isSplitActive = false;
     let isLeftLoaded = false;
-    let isRightLoaded = false;
 
     const panelContainer = document.getElementById('panel-container');
     const panelToggleBtn = document.getElementById('panel-toggle-btn');
@@ -581,80 +214,33 @@
     const statusBanner = document.getElementById('status-banner');
     const statusText = document.getElementById('status-text');
 
-    function attachHandlers(mapInstance) {
-      mapInstance.on('styleimagemissing', (e) => {
-        const id = e.id;
-        if (!mapInstance.hasImage(id)) {
-          const canvas = document.createElement('canvas');
-          canvas.width = 1;
-          canvas.height = 1;
-          const ctx = canvas.getContext('2d');
-          const imageData = ctx.getImageData(0, 0, 1, 1);
-          mapInstance.addImage(id, imageData);
-        }
-      });
-
-      mapInstance.on('error', (e) => {
-        if (e.error && e.error.message && e.error.message.includes('napr.gov.ge')) {
-          console.warn('WMS Tile fetch failed gracefully:', e.error.message);
-        }
-      });
-    }
-
-    attachHandlers(leftMap);
-
-    panelToggleBtn.addEventListener('click', () => {
-      panelContainer.classList.toggle('collapsed');
-    });
+    panelToggleBtn.addEventListener('click', () => panelContainer.classList.toggle('collapsed'));
 
     function setupWmsSourcesAndLayers(mapInstance) {
       if (!mapInstance) return;
       Object.entries(LAYERS_CONFIG).forEach(([key, cfg]) => {
-        if (cfg.type === 'wms') {
-          const sourceId = `${cfg.id}-src`;
-          if (!mapInstance.getSource(sourceId)) {
-            mapInstance.addSource(sourceId, {
-              type: 'raster',
-              tiles: [cfg.url],
-              tileSize: 256,
-              bounds: GEORGIA_BOUNDS,
-              minzoom: 6,
-              maxzoom: 14
-            });
-          }
-          if (!mapInstance.getLayer(cfg.id)) {
-            mapInstance.addLayer({
-              id: cfg.id,
-              type: 'raster',
-              source: sourceId,
-              layout: { visibility: 'none' },
-              paint: { 'raster-opacity': 1.0 }
-            });
-          }
-        } else if (cfg.type === 'mapbox-raster') {
-          if (mapInstance.getLayer(cfg.id)) {
-            mapInstance.setLayoutProperty(cfg.id, 'visibility', 'none');
-          }
+        const sourceId = `${cfg.id}-src`;
+        if (!mapInstance.getSource(sourceId)) {
+          mapInstance.addSource(sourceId, { type: 'raster', tiles: [cfg.url], tileSize: 256, bounds: GEORGIA_BOUNDS });
+        }
+        if (!mapInstance.getLayer(cfg.id)) {
+          mapInstance.addLayer({ id: cfg.id, type: 'raster', source: sourceId, layout: { visibility: 'none' }, paint: { 'raster-opacity': 1.0 } });
         }
       });
     }
 
-    leftMap.on('style.load', () => { 
+    leftMap.on('style.load', () => {
       isLeftLoaded = true;
       setupWmsSourcesAndLayers(leftMap);
     });
 
     function getSelectedKeys() {
-      return Object.keys(LAYERS_CONFIG).filter(key => {
-        const el = document.getElementById(LAYERS_CONFIG[key].toggleId);
-        return el && el.checked;
-      });
+      return Object.keys(LAYERS_CONFIG).filter(key => document.getElementById(LAYERS_CONFIG[key].toggleId)?.checked);
     }
 
     function updateUIState() {
       if (!isLeftLoaded) return;
       const selectedKeys = getSelectedKeys();
-
       splitBtn.disabled = selectedKeys.length !== 2;
 
       if (selectedKeys.length !== 2 && isSplitActive) {
@@ -664,31 +250,14 @@
           const cfg = LAYERS_CONFIG[key];
           const isChecked = selectedKeys.includes(key);
           if (leftMap.getLayer(cfg.id)) {
-            const currentVis = leftMap.getLayoutProperty(cfg.id, 'visibility');
-            const targetVis = isChecked ? 'visible' : 'none';
-            if (currentVis !== targetVis) {
-              leftMap.setLayoutProperty(cfg.id, 'visibility', targetVis);
-            }
+            leftMap.setLayoutProperty(cfg.id, 'visibility', isChecked ? 'visible' : 'none');
           }
         });
-
-        if (selectedKeys.length === 2) {
-          statusText.textContent = 'მზადაა შედარებისთვის';
-        } else if (selectedKeys.length === 1) {
-          statusText.textContent = 'აირჩიეთ მეორე ფენა შედარებისთვის';
-        } else {
-          statusText.textContent = 'აირჩიეთ ფენები';
-        }
+        statusText.textContent = selectedKeys.length === 2 ? 'მზადაა შედარებისთვის' : 'აირჩიეთ 2 ფენა';
       }
     }
 
-    splitBtn.addEventListener('click', () => {
-      if (isSplitActive) {
-        disableSplitMode();
-      } else {
-        enableSplitMode();
-      }
-    });
+    splitBtn.addEventListener('click', () => isSplitActive ? disableSplitMode() : enableSplitMode());
 
     function enableSplitMode() {
       const selectedKeys = getSelectedKeys();
@@ -697,7 +266,6 @@
       isSplitActive = true;
       splitBtn.textContent = 'შედარების გათიშვა';
       splitBtn.classList.add('active');
-
       document.getElementById('right-map').style.display = 'block';
 
       if (!rightMap) {
@@ -705,128 +273,50 @@
           container: 'right-map',
           style: STYLE_URL,
           center: leftMap.getCenter(),
-          zoom: leftMap.getZoom(),
-          bearing: leftMap.getBearing(),
-          pitch: leftMap.getPitch()
+          zoom: leftMap.getZoom()
         });
-
-        attachHandlers(rightMap);
-
         rightMap.once('style.load', () => {
-          isRightLoaded = true;
           setupWmsSourcesAndLayers(rightMap);
           applySplitVisibilities(selectedKeys);
-          applyOpacityValues();
-          initCompareControl();
+          compareInstance = new mapboxgl.Compare(leftMap, rightMap, '#map-wrapper', {});
         });
       } else {
         applySplitVisibilities(selectedKeys);
-        applyOpacityValues();
-        initCompareControl();
+        compareInstance = new mapboxgl.Compare(leftMap, rightMap, '#map-wrapper', {});
       }
-
       statusBanner.classList.add('active');
       statusText.textContent = 'ორმაგი ეკრანი ჩართულია';
     }
 
     function applySplitVisibilities(selectedKeys) {
-      const leftLayerKey = selectedKeys[0];
-      const rightLayerKey = selectedKeys[1];
-
+      const [leftKey, rightKey] = selectedKeys;
       Object.keys(LAYERS_CONFIG).forEach(key => {
-        const layerId = LAYERS_CONFIG[key].id;
-        
-        if (leftMap.getLayer(layerId)) {
-          const targetLeft = key === leftLayerKey ? 'visible' : 'none';
-          if (leftMap.getLayoutProperty(layerId, 'visibility') !== targetLeft) {
-            leftMap.setLayoutProperty(layerId, 'visibility', targetLeft);
-          }
-        }
-
-        if (rightMap && isRightLoaded && rightMap.getLayer(layerId)) {
-          const targetRight = key === rightLayerKey ? 'visible' : 'none';
-          if (rightMap.getLayoutProperty(layerId, 'visibility') !== targetRight) {
-            rightMap.setLayoutProperty(layerId, 'visibility', targetRight);
-          }
-        }
+        const id = LAYERS_CONFIG[key].id;
+        if (leftMap.getLayer(id)) leftMap.setLayoutProperty(id, 'visibility', key === leftKey ? 'visible' : 'none');
+        if (rightMap?.getLayer(id)) rightMap.setLayoutProperty(id, 'visibility', key === rightKey ? 'visible' : 'none');
       });
-    }
-
-    function initCompareControl() {
-      if (compareInstance) {
-        compareInstance.remove();
-        compareInstance = null;
-      }
-      compareInstance = new mapboxgl.Compare(leftMap, rightMap, '#map-wrapper', {});
     }
 
     function disableSplitMode() {
       isSplitActive = false;
       splitBtn.textContent = 'შედარების ჩართვა';
       splitBtn.classList.remove('active');
-
-      if (compareInstance) {
-        compareInstance.remove();
-        compareInstance = null;
-      }
-
+      if (compareInstance) { compareInstance.remove(); compareInstance = null; }
       document.getElementById('right-map').style.display = 'none';
-
-      const selectedKeys = getSelectedKeys();
-      Object.keys(LAYERS_CONFIG).forEach(key => {
-        const cfg = LAYERS_CONFIG[key];
-        const isChecked = selectedKeys.includes(key);
-        if (leftMap.getLayer(cfg.id)) {
-          const targetVis = isChecked ? 'visible' : 'none';
-          if (leftMap.getLayoutProperty(cfg.id, 'visibility') !== targetVis) {
-            leftMap.setLayoutProperty(cfg.id, 'visibility', targetVis);
-          }
-        }
-      });
-
+      updateUIState();
       leftMap.resize();
-
       statusBanner.classList.remove('active');
-      if (selectedKeys.length === 2) {
-        statusText.textContent = 'მზადაა შედარებისთვის';
-      } else {
-        statusText.textContent = 'აირჩიეთ ფენები';
-      }
-    }
-
-    function applyOpacityValues() {
-      Object.keys(LAYERS_CONFIG).forEach(key => {
-        const cfg = LAYERS_CONFIG[key];
-        const sliderEl = document.getElementById(cfg.opacityId);
-        if (!sliderEl) return;
-
-        const val = parseFloat(sliderEl.value) / 100;
-
-        if (leftMap.getLayer(cfg.id)) {
-          leftMap.setPaintProperty(cfg.id, 'raster-opacity', val);
-        }
-        if (rightMap && isRightLoaded && rightMap.getLayer(cfg.id)) {
-          rightMap.setPaintProperty(cfg.id, 'raster-opacity', val);
-        }
-      });
     }
 
     Object.keys(LAYERS_CONFIG).forEach(key => {
       const cfg = LAYERS_CONFIG[key];
-      const toggleEl = document.getElementById(cfg.toggleId);
-      const sliderEl = document.getElementById(cfg.opacityId);
-      const valEl = document.getElementById(cfg.valId);
-
-      if (toggleEl) {
-        toggleEl.addEventListener('change', updateUIState);
-      }
-
-      if (sliderEl) {
-        sliderEl.addEventListener('input', (e) => {
-          if (valEl) valEl.textContent = `${e.target.value}%`;
-          applyOpacityValues();
-        });
-      }
+      document.getElementById(cfg.toggleId)?.addEventListener('change', updateUIState);
+      document.getElementById(cfg.opacityId)?.addEventListener('input', (e) => {
+        document.getElementById(cfg.valId).textContent = `${e.target.value}%`;
+        const val = parseFloat(e.target.value) / 100;
+        if (leftMap.getLayer(cfg.id)) leftMap.setPaintProperty(cfg.id, 'raster-opacity', val);
+        if (rightMap?.getLayer(cfg.id)) rightMap.setPaintProperty(cfg.id, 'raster-opacity', val);
+      });
     });
   </script>
 </body>
