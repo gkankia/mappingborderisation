@@ -5,7 +5,11 @@
 // Only the workspaces below are allowed, so this cannot be used as an open proxy.
 const ALLOWED_WORKSPACES = new Set([
   'TOPO_10k_1952_2007',
+  'TOPO_25k_1953-2004',
   'TOPO_50k_1973-1990',
+  'TOPO_100K_1978_1990',
+  'TOPO_200k_1981_1990',
+  'TOPO_500k_1989',
   'TOPO_1000k_1988-90'
 ]);
 
