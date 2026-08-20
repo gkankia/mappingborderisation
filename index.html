@@ -471,12 +471,14 @@
     mapboxgl.accessToken = 'pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNrZ3R6M2FvdTBwbmwycXBibGRqM2w2enYifQ.BxjvFSGqefuC9yFCrXC-nQ';
     const STYLE_URL = 'mapbox://styles/jorjone90/cmt0iv5hs001101sgcqdrhheh';
 
-    // Exact layer extent converted from EPSG:3857 to EPSG:4326 [minLng, minLat, maxLng, maxLat]
+    // Layer extent in EPSG:4326 [minLng, minLat, maxLng, maxLat]
     const GEORGIA_BOUNDS = [41.5926, 41.0020, 46.8671, 42.4330];
 
     function buildWmsUrl(getMapEndpoint, layerName) {
       const cleanBase = getMapEndpoint.split('?')[0];
-      return `${cleanBase}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=${layerName}&FORMAT=image/png&TRANSPARENT=TRUE&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256`;
+      // Updated to HTTPS to avoid Mixed Content restrictions
+      const httpsBase = cleanBase.replace('http://', 'https://');
+      return `${httpsBase}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=${layerName}&FORMAT=image/png&TRANSPARENT=TRUE&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256`;
     }
 
     const LAYERS_CONFIG = {
@@ -490,7 +492,7 @@
       topo10k: { 
         id: 'wms-topo-10k', 
         type: 'wms', 
-        url: buildWmsUrl('http://mp1.napr.gov.ge/TOPO_10k_1952_2007/service', 'TOPO_10000_1952_2007'), 
+        url: buildWmsUrl('https://mp1.napr.gov.ge/TOPO_10k_1952_2007/service', 'TOPO_10000_1952_2007'), 
         toggleId: 'toggle-topo10k', 
         opacityId: 'opacity-topo10k', 
         valId: 'val-topo10k' 
@@ -498,7 +500,7 @@
       topo25k: { 
         id: 'wms-topo-25k', 
         type: 'wms', 
-        url: buildWmsUrl('http://mp1.napr.gov.ge/TOPO_25k_1953-2004/service', 'TOPO_25000_1953_2004'), 
+        url: buildWmsUrl('https://mp1.napr.gov.ge/TOPO_25k_1953-2004/service', 'TOPO_25000_1953_2004'), 
         toggleId: 'toggle-topo25k', 
         opacityId: 'opacity-topo25k', 
         valId: 'val-topo25k' 
@@ -506,7 +508,7 @@
       topo50k: { 
         id: 'wms-topo-50k', 
         type: 'wms', 
-        url: buildWmsUrl('http://mp1.napr.gov.ge/TOPO_50k_1973-1990/service', 'TOPO_50000_1973_1990'), 
+        url: buildWmsUrl('https://mp1.napr.gov.ge/TOPO_50k_1973-1990/service', 'TOPO_50000_1973_1990'), 
         toggleId: 'toggle-topo50k', 
         opacityId: 'opacity-topo50k', 
         valId: 'val-topo50k' 
@@ -514,7 +516,7 @@
       topo100k: { 
         id: 'wms-topo-100k', 
         type: 'wms', 
-        url: buildWmsUrl('http://mp1.napr.gov.ge/TOPO_100K_1978_1990/service', 'TOPO_100000_1978_1990'), 
+        url: buildWmsUrl('https://mp1.napr.gov.ge/TOPO_100K_1978_1990/service', 'TOPO_100000_1978_1990'), 
         toggleId: 'toggle-topo100k', 
         opacityId: 'opacity-topo100k', 
         valId: 'val-topo100k' 
@@ -522,7 +524,7 @@
       topo200k: { 
         id: 'wms-topo-200k', 
         type: 'wms', 
-        url: buildWmsUrl('http://mp1.napr.gov.ge/TOPO_200k_1981_1990/service', 'TOPO_200000_1981_1990'), 
+        url: buildWmsUrl('https://mp1.napr.gov.ge/TOPO_200k_1981_1990/service', 'TOPO_200000_1981_1990'), 
         toggleId: 'toggle-topo200k', 
         opacityId: 'opacity-topo200k', 
         valId: 'val-topo200k' 
@@ -530,7 +532,7 @@
       topo500k: { 
         id: 'wms-topo-500k', 
         type: 'wms', 
-        url: buildWmsUrl('http://mp1.napr.gov.ge/TOPO_500k_1989/service', 'TOPO_500000_1989'), 
+        url: buildWmsUrl('https://mp1.napr.gov.ge/TOPO_500k_1989/service', 'TOPO_500000_1989'), 
         toggleId: 'toggle-topo500k', 
         opacityId: 'opacity-topo500k', 
         valId: 'val-topo500k' 
@@ -538,7 +540,7 @@
       topo1000k: { 
         id: 'wms-topo-1000k', 
         type: 'wms', 
-        url: buildWmsUrl('http://mp1.napr.gov.ge/TOPO_1000k_1988-90/service', 'TOPO_1000000_1988_1990'), 
+        url: buildWmsUrl('https://mp1.napr.gov.ge/TOPO_1000k_1988-90/service', 'TOPO_1000000_1988_1990'), 
         toggleId: 'toggle-topo1000k', 
         opacityId: 'opacity-topo1000k', 
         valId: 'val-topo1000k' 
@@ -553,6 +555,18 @@
       style: STYLE_URL,
       center: initialCenter,
       zoom: initialZoom
+    });
+
+    // Sanitize lights configuration in Mapbox Style JSON to prevent shadow-quality warnings
+    leftMap.on('style.load', () => {
+      const style = leftMap.getStyle();
+      if (style.lights) {
+        style.lights.forEach(light => {
+          if (light.properties && light.properties['shadow-quality']) {
+            delete light.properties['shadow-quality'];
+          }
+        });
+      }
     });
 
     let rightMap = null;
