@@ -43,19 +43,17 @@
     }
 
     #panel-toggle-btn {
-      background: var(--bg-panel); backdrop-filter: blur(16px);
-      border: 1px solid var(--border-panel); padding: 6px;
-      border-radius: 50%; box-shadow: var(--shadow);
+      background: none; border: none; padding: 0;
       cursor: pointer; display: flex; align-items: center;
-      transition: all 0.25s ease;
+      transition: transform 0.25s ease;
     }
 
     #panel-toggle-btn:hover { transform: translateY(-1px); }
 
     /* The artwork is a raster inside the SVG and carries its own colours, so it
        cannot inherit currentColor. It also sits in the middle ~60% of its own
-       30x30 viewBox, hence the generous box. */
-    #panel-toggle-btn .layers-icon { width: 30px; height: 30px; display: block; }
+       30x30 viewBox, so the box is larger than the glyph it draws. */
+    #panel-toggle-btn .layers-icon { width: 132px; height: 132px; display: block; }
 
     #layer-panel {
       background: var(--bg-panel); backdrop-filter: blur(16px);
