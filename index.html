@@ -154,45 +154,55 @@
   <script>
     mapboxgl.accessToken = 'pk.eyJ1Ijoiam9yam9uZTkwIiwiYSI6ImNrZ3R6M2FvdTBwbmwycXBibGRqM2w2enYifQ.BxjvFSGqefuC9yFCrXC-nQ';
     const STYLE_URL = 'mapbox://styles/jorjone90/cmt0iv5hs001101sgcqdrhheh';
-    const GEORGIA_BOUNDS = [41.5926, 41.0020, 46.8671, 42.4330];
+    // [west, south, east, north] — full extent of Georgia
+    const GEORGIA_BOUNDS = [39.9, 41.0, 46.8, 43.65];
 
-    // Points directly to the Netlify serverless proxy route defined in netlify.toml
-    function buildWmsUrl(layerName) {
+    // The topo sheets are served by NAPR, one GeoServer workspace per dataset.
+    // The upstream sends Access-Control-Allow-Origin: *, so the browser can hit it
+    // directly; flip USE_PROXY to true to route through /api/wms-proxy instead.
+    const USE_PROXY = false;
+    const WMS_HOST = 'https://mp.napr.gov.ge';
+
+    function buildWmsUrl(workspace, layerName) {
       const queryParams = new URLSearchParams({
         SERVICE: 'WMS',
         VERSION: '1.1.1',
         REQUEST: 'GetMap',
         LAYERS: layerName,
+        STYLES: '',            // required by this server — omitting it returns HTTP 500
         FORMAT: 'image/png',
         TRANSPARENT: 'TRUE',
         SRS: 'EPSG:3857',
         WIDTH: '256',
         HEIGHT: '256'
       });
-      return `/api/wms-proxy?${queryParams.toString()}&BBOX={bbox-epsg-3857}`;
+      const base = USE_PROXY
+        ? `/api/wms-proxy?ws=${encodeURIComponent(workspace)}&`
+        : `${WMS_HOST}/${workspace}/ows?`;
+      return `${base}${queryParams.toString()}&BBOX={bbox-epsg-3857}`;
     }
 
     const LAYERS_CONFIG = {
-      topo10k: { 
-        id: 'wms-topo-10k', 
-        url: buildWmsUrl('TOPO_10000_1952_2007'), 
-        toggleId: 'toggle-topo10k', 
-        opacityId: 'opacity-topo10k', 
-        valId: 'val-topo10k' 
+      topo10k: {
+        id: 'wms-topo-10k',
+        url: buildWmsUrl('TOPO_10k_1952_2007', 'TOPO_10000_1952_2007'),
+        toggleId: 'toggle-topo10k',
+        opacityId: 'opacity-topo10k',
+        valId: 'val-topo10k'
       },
-      topo50k: { 
-        id: 'wms-topo-50k', 
-        url: buildWmsUrl('TOPO_50000_1973_1990'), 
-        toggleId: 'toggle-topo50k', 
-        opacityId: 'opacity-topo50k', 
-        valId: 'val-topo50k' 
+      topo50k: {
+        id: 'wms-topo-50k',
+        url: buildWmsUrl('TOPO_50k_1973-1990', 'TOPO_50000_1973_1990'),
+        toggleId: 'toggle-topo50k',
+        opacityId: 'opacity-topo50k',
+        valId: 'val-topo50k'
       },
-      topo1000k: { 
-        id: 'wms-topo-1000k', 
-        url: buildWmsUrl('TOPO_1000000_1988_1990'), 
-        toggleId: 'toggle-topo1000k', 
-        opacityId: 'opacity-topo1000k', 
-        valId: 'val-topo1000k' 
+      topo1000k: {
+        id: 'wms-topo-1000k',
+        url: buildWmsUrl('TOPO_1000k_1988-90', 'TOPO_1000000'),
+        toggleId: 'toggle-topo1000k',
+        opacityId: 'opacity-topo1000k',
+        valId: 'val-topo1000k'
       }
     };
 
