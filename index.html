@@ -204,12 +204,19 @@
     input:checked + .slider-switch { background-color: var(--primary); }
     input:checked + .slider-switch:before { transform: translateX(16px); }
 
-    .opacity-value { font-size: 11.5px; font-weight: 600; color: var(--text-muted); min-width: 34px; text-align: right; }
+    /* Scale and opacity readouts belong to a layer that is actually switched on,
+       so the whole block only exists once its checkbox is checked. */
+    .layer-meta { display: none; }
+    .control-card:has(input:checked) .layer-meta { display: block; margin-top: 9px; }
 
-    /* The opacity control only belongs to a layer that is actually switched on. */
-    .opacity-value, .slider-wrapper { display: none; }
-    .control-card:has(input:checked) .opacity-value { display: block; }
-    .control-card:has(input:checked) .slider-wrapper { margin-top: 8px; display: flex; align-items: center; }
+    .meta-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      gap: 10px; font-size: 11.5px; margin-bottom: 5px;
+    }
+    .meta-label { color: var(--text-muted); }
+    .meta-value { font-weight: 600; color: var(--text-main); }
+    .opacity-value { min-width: 34px; text-align: right; }
+    .slider-wrapper { display: flex; align-items: center; margin-top: 2px; }
     .opacity-slider { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: #e0e0e0; outline: none; }
     .opacity-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); cursor: pointer; }
 
@@ -357,7 +364,7 @@
 
       <h3>სხვა ფენები</h3>
       <ul>
-        <li><strong>საბაზისო რუკა და ტოპონიმე</strong> — Z.axis Hillshade Basemap & Mapbox,
+        <li><strong>საბაზისო რუკა და ტოპონიმები</strong> — Z.axis Hillshade Basemap & Mapbox,
             &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-ის კონტრიბუტორები.</li>
         <li><strong>რელიეფი</strong> — Mapbox Terrain</li>
       </ul>
@@ -441,9 +448,18 @@
             <label class="switch"><input type="checkbox" id="${cfg.toggleId}"><span class="slider-switch"></span></label>
             <span class="layer-name">${cfg.label}</span>
           </div>
-          <span id="${cfg.valId}" class="opacity-value">100%</span>
         </div>
-        <div class="slider-wrapper"><input type="range" id="${cfg.opacityId}" class="opacity-slider" min="0" max="100" value="100"></div>
+        <div class="layer-meta">
+          ${cfg.scale ? `<div class="meta-row">
+            <span class="meta-label">მასშტაბი</span>
+            <span class="meta-value">${cfg.scale}</span>
+          </div>` : ''}
+          <div class="meta-row">
+            <span class="meta-label">გამჭვირვალობა</span>
+            <span id="${cfg.valId}" class="meta-value opacity-value">100%</span>
+          </div>
+          <div class="slider-wrapper"><input type="range" id="${cfg.opacityId}" class="opacity-slider" min="0" max="100" value="100"></div>
+        </div>
       </div>`).join('');
 
     const leftMap = new mapboxgl.Map({
