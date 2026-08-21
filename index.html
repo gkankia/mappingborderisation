@@ -95,7 +95,7 @@
 
 
     .glass-btn {
-      width: 44px; height: 44px; flex: 0 0 44px; padding: 0;
+      width: 48px; height: 48px; flex: 0 0 48px; padding: 0;
       display: flex; align-items: center; justify-content: center;
       background: none; border: none; cursor: pointer; color: #1c1c1e;
     }
@@ -106,8 +106,9 @@
       stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
     }
 
-    #sources-btn { border-radius: 50%; transition: transform 0.25s ease; }
+    #sources-btn { transition: transform 0.25s ease; }
     #sources-btn:hover { transform: translateY(-1px); }
+    #sources-btn svg { filter: drop-shadow(0 1.5px 3px rgba(0, 0, 0, 0.45)); }
 
     /* ---- search: one pill that morphs from icon to field -------------- */
     /* Closed it is just the magnifier — no plate. The glass only materialises as
@@ -132,15 +133,18 @@
     #search-btn {
       width: 48px; height: 48px; flex: 0 0 48px; padding: 0;
       display: flex; align-items: center; justify-content: center;
-      background: none; border: none; cursor: pointer; color: #1c1c1e;
+      background: none; border: none; cursor: pointer; color: #ffffff;
     }
+    /* White glyph, so the shadow is what separates it from a light basemap —
+       doubled up to read as an outline rather than a soft drop. It is kept when
+       the bar is open too, or the white stroke would vanish into the glass. */
     #search-btn svg {
       width: 22px; height: 22px; display: block;
       stroke: currentColor; fill: none;
       stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round;
-      filter: drop-shadow(0 1.5px 2.5px rgba(0, 0, 0, 0.45));
+      filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.55))
+              drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
     }
-    #search-wrap.open #search-btn svg { filter: none; }
 
     #search-input {
       flex: 1 1 auto; min-width: 0; height: 100%;
@@ -324,7 +328,7 @@
   </div>
 
   <!-- bottom right -->
-  <button id="sources-btn" class="glass glass-btn" aria-label="წყაროები და მეთოდოლოგია" title="წყაროები და მეთოდოლოგია">
+  <button id="sources-btn" class="glass-btn" aria-label="წყაროები და მეთოდოლოგია" title="წყაროები და მეთოდოლოგია">
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="12" cy="12" r="9.25"/><path d="M12 11v5.5"/><path d="M12 7.75v.5"/>
     </svg>
@@ -338,46 +342,34 @@
   <div id="sources-overlay" hidden>
     <div id="sources-dialog" role="dialog" aria-modal="true" aria-labelledby="sources-title">
       <button id="sources-close" aria-label="დახურვა">&times;</button>
-      <h2 id="sources-title">წყაროები და მეთოდოლოგია</h2>
-
-      <h3>ისტორიული ტოპოგრაფიული რუკები</h3>
-      <p>საბჭოთა პერიოდის ტოპოგრაფიული რუკები მოწოდებულია სსიპ — საჯარო რეესტრის
-         ეროვნული სააგენტოს (NAPR) WMS სერვისებით, რომლებიც კატალოგიზებულია
-         <a href="https://nsdi.gov.ge/ka/geoportal" target="_blank" rel="noopener">NSDI-ის გეოპორტალზე</a>.</p>
+      <h2 id="sources-title">პორტალის შესახებ</h2>
+      <h3>რუკის ფენები</h3>
+      <p>სამხრეთ ოსეთის ავტონომიური ოლქის რუკა 1922 წელი - საქართველოს ეროვნული არქივი</p>
+      <p>საბჭოთა პერიოდის სამხედრო ტოპოგრაფიული რუკები — საჯარო რეესტრის
+         ეროვნული სააგენტოს (NAPR) WMS სერვისი. 
+         <a href="https://nsdi.gov.ge/ka/geoportal" target="_blank" rel="noopener">NSDI გეოპორტალი</a>.</p>
       <div class="src-table-wrap">
         <table>
-          <thead><tr><th>მასშტაბი</th><th>წელი</th><th>WMS ფენა</th></tr></thead>
+          <thead><tr><th>მასშტაბი</th><th>წელი</th></tr></thead>
           <tbody id="src-table-body"></tbody>
         </table>
       </div>
-      <p>სერვისი: <code>https://mp.napr.gov.ge/&lt;workspace&gt;/ows</code> — WMS 1.1.1, EPSG:3857,
-         256&times;256 ტაილები.</p>
 
       <h3>სხვა ფენები</h3>
       <ul>
-        <li><strong>1922 წლის რუკა</strong> — Mapbox-ის რასტრული ტაილსეტი
-            <code>jorjone90.8mob70</code>.</li>
-        <li><strong>საბაზისო რუკა და ლეიბლები</strong> — Mapbox,
+        <li><strong>საბაზისო რუკა და ტოპონიმე</strong> — Z.axis Hillshade Basemap & Mapbox,
             &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-ის კონტრიბუტორები.</li>
-        <li><strong>რელიეფი</strong> — Mapbox Terrain DEM v1.</li>
+        <li><strong>რელიეფი</strong> — Mapbox Terrain</li>
       </ul>
 
-      <h3>მეთოდოლოგია</h3>
+      <h3>რუკის გამოყენება</h3>
       <ul>
-        <li>ფენები იტვირთება WMS <code>GetMap</code> მოთხოვნებით, პირდაპირ ბრაუზერიდან,
-            EPSG:3857 პროექციაში.</li>
-        <li>თითოეული ფენის გამჭვირვალობა რეგულირდება დამოუკიდებლად, რაც საშუალებას იძლევა
-            სხვადასხვა პერიოდის რუკების ერთმანეთზე დადებით შედარებას.</li>
-        <li>ორი ფენის გვერდიგვერდ შედარება ხდება გადასაწევი ზოლით; რუკების ხედები
-            სინქრონიზებულია.</li>
-        <li>რასტრები იჭრება გადაღების არეალის მიხედვით, სტილში განსაზღვრული
-            <code>soviet_topo_cover</code> მასკით.</li>
-        <li>ძებნა ეყრდნობა Mapbox Geocoding v6 API-ს, საქართველოს ტერიტორიაზე შეზღუდვით.</li>
+        <li>ფენები იტვირთება EPSG:3857 პროექციაში.</li>
+        <li>თითოეული აქტიური ფენის გამჭვირვალობა რეგულირდება დამოუკიდებლად.</li>
+        <li>რუკა იძლევა სასურველი ორი ფენის ერთმანეთთან შედარების საშუალებას. 
+          ამისთვის, ჯერ გაააქტიურეთ სასურველი ფენები და შემდეგ დააჭირეთ შესაბამის ღილაკს.</li>
+        <li>ტოპონიმებისთვის გამოყენებულია Mapbox Geocoding v6</li>
       </ul>
-
-      <p class="src-todo">შესავსებია: კვლევის შინაარსობრივი მეთოდოლოგია — ბორდერიზაციის
-         ანალიზის აღწერა, 1922 წლის რუკის ბიბლიოგრაფიული წყარო და მონაცემთა
-         ინტერპრეტაციის პრინციპები.</p>
     </div>
   </div>
 
@@ -734,7 +726,7 @@
     // Build the dataset table from the layer config so the two cannot drift apart.
     document.getElementById('src-table-body').innerHTML = Object.values(LAYERS_CONFIG)
       .filter(cfg => cfg.scale)
-      .map(cfg => `<tr><td>${cfg.scale}</td><td>${cfg.year}</td><td><code>${cfg.layer}</code></td></tr>`)
+      .map(cfg => `<tr><td>${cfg.scale}</td><td>${cfg.year}</td></tr>`)
       .join('');
 
     function openSources() { sourcesOverlay.hidden = false; }
