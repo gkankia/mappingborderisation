@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>Mapbox Historical Soviet Topo WMS Layers</title>
-  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <link rel="icon" href="data:," />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,14 +27,21 @@
       --radius: 16px;
     }
 
+    html, body {
+      height: 100%; margin: 0; padding: 0; overflow: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+
     body {
-      margin: 0; padding: 0;
       font-family: 'Google Sans', 'Noto Sans Georgian', sans-serif;
       color: var(--text-main); background-color: #0e1726;
     }
 
-    #map-wrapper { position: absolute; top: 0; bottom: 0; width: 100%; }
-    .map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    /* every tap target skips the 300ms mobile click delay */
+    button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+    #map-wrapper { position: absolute; inset: 0; }
+    .map { position: absolute; inset: 0; }
     #right-map { display: none; }
 
     #panel-container {
@@ -45,22 +52,24 @@
     /* search lives in the opposite corner from the layer controls */
     #search-box { position: absolute; top: 20px; left: 20px; z-index: 10; }
 
-    /* Mapbox permits moving its logo to another corner (but not restyling it or
-       removing it), so it moves in beside its own attribution and leaves the
-       bottom-left corner to the Zaxis mark. */
-    .mapboxgl-ctrl-bottom-left { left: auto; right: 0; bottom: 22px; }
+    /* Mapbox logo and attribution suppressed at your instruction — see note. */
+    .mapboxgl-ctrl-logo, .mapboxgl-ctrl-attrib { display: none !important; }
 
     #zaxis-logo {
-      position: absolute; bottom: 14px; left: 20px; z-index: 9;
-      padding: 7px 12px; border-radius: 14px; line-height: 0;
+      position: absolute; bottom: 18px; left: 20px; z-index: 9; line-height: 0;
     }
-    #zaxis-logo img { width: 58px; height: auto; display: block; }
+    /* the asset ships as #fcfcfc; brightness(0) forces it to black without
+       needing a second copy of the file */
+    #zaxis-logo img {
+      width: 62px; height: auto; display: block;
+      filter: brightness(0);
+    }
 
-    #sources-btn { position: absolute; bottom: 64px; right: 20px; z-index: 10; }
+    #sources-btn { position: absolute; bottom: 20px; right: 20px; z-index: 10; }
 
     #panel-toggle-btn {
-      width: 48px; height: 48px; border-radius: 50%; padding: 0;
-      border: none; cursor: pointer;
+      width: 48px; height: 48px; padding: 0;
+      background: none; border: none; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       transition: transform 0.25s ease;
     }
@@ -70,7 +79,10 @@
     /* The artwork is a raster inside the SVG and carries its own colours, so it
        cannot inherit currentColor. It also sits in the middle ~60% of its own
        30x30 viewBox, so the box is larger than the glyph it draws. */
-    #panel-toggle-btn .layers-icon { width: 34px; height: 34px; display: block; }
+    #panel-toggle-btn .layers-icon {
+      width: 44px; height: 44px; display: block;
+      filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.32));
+    }
 
     /* ---- shared liquid-glass surface ---------------------------------- */
     .glass {
@@ -81,15 +93,6 @@
       box-shadow: 0 8px 26px rgba(0, 0, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.45);
     }
 
-    /* the Zaxis mark is pure white (#fcfcfc), so it needs a dark plate to read
-       against this near-white basemap */
-    .glass-dark {
-      background: rgba(16, 22, 34, 0.42);
-      backdrop-filter: blur(18px) saturate(160%);
-      -webkit-backdrop-filter: blur(18px) saturate(160%);
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.18);
-    }
 
     .glass-btn {
       width: 44px; height: 44px; flex: 0 0 44px; padding: 0;
@@ -111,14 +114,14 @@
        the pill expands, which is what reads as the liquid effect. */
     #search-wrap {
       display: flex; align-items: center; overflow: hidden;
-      width: 44px; height: 44px; border-radius: 999px;
+      width: 48px; height: 48px; border-radius: 999px;
       background: transparent; border: 1px solid transparent; box-shadow: none;
       transition: width 0.55s cubic-bezier(0.22, 1.4, 0.36, 1),
                   background 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
     }
 
     #search-wrap.open {
-      width: min(340px, 62vw);
+      width: min(340px, calc(100vw - 96px));
       background: rgba(255, 255, 255, 0.30);
       backdrop-filter: blur(18px) saturate(180%);
       -webkit-backdrop-filter: blur(18px) saturate(180%);
@@ -127,7 +130,7 @@
     }
 
     #search-btn {
-      width: 44px; height: 44px; flex: 0 0 44px; padding: 0;
+      width: 48px; height: 48px; flex: 0 0 48px; padding: 0;
       display: flex; align-items: center; justify-content: center;
       background: none; border: none; cursor: pointer; color: #1c1c1e;
     }
@@ -142,7 +145,7 @@
     #search-input {
       flex: 1 1 auto; min-width: 0; height: 100%;
       border: none; background: none; outline: none;
-      font-family: inherit; font-size: 14px; color: var(--text-main);
+      font-family: inherit; font-size: 16px; color: var(--text-main);
       padding: 0 16px 0 2px;
       opacity: 0; pointer-events: none;
       transition: opacity 0.28s ease 0.14s;
@@ -156,7 +159,7 @@
     #search-results {
       position: absolute; top: calc(100% + 8px); left: 0; z-index: 11;
       list-style: none; margin: 0; padding: 6px;
-      width: min(340px, 62vw); max-height: 300px; overflow-y: auto;
+      width: min(340px, calc(100vw - 96px)); max-height: 300px; overflow-y: auto;
       border-radius: 16px; display: none;
     }
     #search-results.visible { display: block; }
@@ -270,7 +273,7 @@
     #split-labels { display: none; }
     #split-labels.active { display: block; }
     .split-label {
-      position: absolute; bottom: 112px; z-index: 9;
+      position: absolute; bottom: 80px; z-index: 9;
       background: var(--bg-panel); backdrop-filter: blur(16px);
       border: 1px solid var(--border-panel); box-shadow: var(--shadow);
       padding: 7px 14px; border-radius: 20px;
@@ -311,7 +314,7 @@
 
   <!-- top right -->
   <div id="panel-container" class="collapsed">
-    <button id="panel-toggle-btn" class="glass" aria-label="რუკის ფენები" title="რუკის ფენები">
+    <button id="panel-toggle-btn" aria-label="რუკის ფენები" title="რუკის ფენები">
       <img class="layers-icon" src="advanced%20geospatial%20analysis.svg" alt="" aria-hidden="true">
     </button>
     <div id="layer-panel">
@@ -328,7 +331,7 @@
   </button>
 
   <!-- bottom left -->
-  <div id="zaxis-logo" class="glass-dark">
+  <div id="zaxis-logo">
     <img src="zaxis-logo-white.svg" alt="Zaxis">
   </div>
 
@@ -455,7 +458,8 @@
       container: 'left-map',
       style: STYLE_URL,
       center: [43.290225, 42.375224],
-      zoom: 7
+      zoom: 7,
+      attributionControl: false
     });
 
     let rightMap = null;
@@ -546,7 +550,8 @@
           container: 'right-map',
           style: STYLE_URL,
           center: leftMap.getCenter(),
-          zoom: leftMap.getZoom()
+          zoom: leftMap.getZoom(),
+          attributionControl: false
         });
         rightMap.once('style.load', () => {
           setupWmsSourcesAndLayers(rightMap);
@@ -624,8 +629,14 @@
       searchInput.setAttribute('aria-expanded', 'false');
     }
 
-    searchBtn.addEventListener('click', () => {
+    searchBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       searchWrap.classList.contains('open') ? closeSearch() : openSearch();
+    });
+
+    // A tap that lands on the pill but misses the glyph should still open it.
+    searchWrap.addEventListener('click', (e) => {
+      if (!searchWrap.classList.contains('open')) { e.stopPropagation(); openSearch(); }
     });
 
     function renderSuggestions() {
@@ -710,11 +721,11 @@
       clearSuggestions();
     }
 
-    document.addEventListener('click', (e) => {
-      if (!searchWrap.contains(e.target) && !searchResults.contains(e.target)) {
-        if (searchWrap.classList.contains('open') && !searchInput.value.trim()) closeSearch();
-        else clearSuggestions();
-      }
+    const searchBox = document.getElementById('search-box');
+    document.addEventListener('pointerdown', (e) => {
+      if (searchBox.contains(e.target)) return;
+      if (searchWrap.classList.contains('open') && !searchInput.value.trim()) closeSearch();
+      else clearSuggestions();
     });
 
     /* ================= sources / methodology dialog ================= */
