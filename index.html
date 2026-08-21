@@ -53,7 +53,83 @@
     /* The artwork is a raster inside the SVG and carries its own colours, so it
        cannot inherit currentColor. It also sits in the middle ~60% of its own
        30x30 viewBox, so the box is larger than the glyph it draws. */
-    #panel-toggle-btn .layers-icon { width: 132px; height: 132px; display: block; }
+    #panel-toggle-btn .layers-icon {
+      width: 48px; height: 48px; display: block;
+      filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.30));
+    }
+
+    /* ---- shared liquid-glass surface ---------------------------------- */
+    .glass {
+      background: rgba(255, 255, 255, 0.16);
+      backdrop-filter: blur(18px) saturate(180%);
+      -webkit-backdrop-filter: blur(18px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.38);
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    }
+
+    #toolbar { display: flex; align-items: center; gap: 10px; }
+
+    .glass-btn {
+      width: 44px; height: 44px; flex: 0 0 44px; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: none; border: none; cursor: pointer; color: #1c1c1e;
+    }
+
+    .glass-btn svg {
+      width: 20px; height: 20px; display: block;
+      stroke: currentColor; fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    #sources-btn { border-radius: 50%; transition: transform 0.25s ease; }
+    #sources-btn:hover { transform: translateY(-1px); }
+
+    /* ---- search: one pill that morphs from icon to field -------------- */
+    #search-wrap {
+      display: flex; align-items: center; overflow: hidden;
+      width: 44px; height: 44px; border-radius: 999px;
+      /* the overshoot in the curve is what gives the expansion its liquid feel */
+      transition: width 0.55s cubic-bezier(0.22, 1.4, 0.36, 1),
+                  background 0.35s ease, box-shadow 0.35s ease;
+    }
+
+    #search-wrap.open {
+      width: min(340px, 62vw);
+      background: rgba(255, 255, 255, 0.34);
+      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    }
+
+    #search-input {
+      flex: 1 1 auto; min-width: 0; height: 100%;
+      border: none; background: none; outline: none;
+      font-family: inherit; font-size: 14px; color: var(--text-main);
+      padding: 0 16px 0 2px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.28s ease 0.14s;
+    }
+    #search-wrap.open #search-input { opacity: 1; pointer-events: auto; }
+    #search-input::placeholder { color: rgba(60, 64, 67, 0.65); }
+    #search-input::-webkit-search-cancel-button { display: none; }
+
+    #search-box { position: relative; }
+
+    #search-results {
+      position: absolute; top: calc(100% + 8px); right: 0; z-index: 11;
+      list-style: none; margin: 0; padding: 6px;
+      width: min(340px, 62vw); max-height: 300px; overflow-y: auto;
+      border-radius: 16px; display: none;
+    }
+    #search-results.visible { display: block; }
+
+    #search-results li {
+      padding: 9px 12px; border-radius: 10px; cursor: pointer;
+      font-size: 13px; line-height: 1.35;
+    }
+    #search-results li:hover, #search-results li.active { background: rgba(255, 255, 255, 0.55); }
+    #search-results li .r-name { font-weight: 600; display: block; }
+    #search-results li .r-context { font-size: 11.5px; color: var(--text-muted); }
+    #search-results li.empty { cursor: default; color: var(--text-muted); }
+    #search-results li.empty:hover { background: none; }
 
     #layer-panel {
       background: var(--bg-panel); backdrop-filter: blur(16px);
@@ -94,6 +170,59 @@
     #split-btn:disabled { background-color: #f1f3f4; color: #3c4043; opacity: 0.6; cursor: not-allowed; }
     #split-btn.active { background-color: #d93025; color: #ffffff; }
 
+    /* ---- sources / methodology dialog -------------------------------- */
+    #sources-overlay {
+      position: fixed; inset: 0; z-index: 20;
+      background: rgba(12, 18, 28, 0.45);
+      backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    #sources-overlay[hidden] { display: none; }
+
+    #sources-dialog {
+      position: relative; width: min(660px, 100%); max-height: 84vh;
+      overflow-y: auto; border-radius: 20px; padding: 26px 28px;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      font-size: 13px; line-height: 1.6; color: var(--text-main);
+    }
+
+    #sources-close {
+      position: absolute; top: 14px; right: 14px;
+      width: 32px; height: 32px; border-radius: 50%;
+      border: none; background: rgba(0, 0, 0, 0.06); cursor: pointer;
+      font-size: 19px; line-height: 1; color: var(--text-muted);
+    }
+    #sources-close:hover { background: rgba(0, 0, 0, 0.12); }
+
+    #sources-dialog h2 { margin: 0 34px 4px 0; font-size: 17px; font-weight: 700; }
+    #sources-dialog h3 { margin: 22px 0 8px; font-size: 13.5px; font-weight: 700; color: var(--primary); }
+    #sources-dialog p { margin: 0 0 10px; }
+    #sources-dialog ul { margin: 0 0 10px; padding-left: 20px; }
+    #sources-dialog li { margin-bottom: 5px; }
+    #sources-dialog code {
+      font-size: 11.5px; background: rgba(0, 0, 0, 0.05);
+      padding: 1px 5px; border-radius: 4px; word-break: break-all;
+    }
+    #sources-dialog a { color: var(--primary); }
+
+    .src-table-wrap { overflow-x: auto; margin-bottom: 10px; }
+    #sources-dialog table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    #sources-dialog th, #sources-dialog td {
+      text-align: left; padding: 6px 10px 6px 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08); white-space: nowrap;
+    }
+    #sources-dialog th { font-weight: 600; color: var(--text-muted); }
+
+    .src-todo {
+      margin: 0; padding: 10px 12px; border-radius: 10px;
+      background: rgba(217, 48, 37, 0.07); border: 1px dashed rgba(217, 48, 37, 0.45);
+      color: #a52714; font-size: 12.5px;
+    }
+
     /* Which layer each half of the comparison is showing. These must live in
        #map-wrapper, not inside the map containers — mapbox-gl-compare sets a CSS
        `clip` on each container, which would crop anything nested inside them.
@@ -126,12 +255,78 @@
   </div>
 
   <div id="panel-container" class="collapsed">
-    <button id="panel-toggle-btn" aria-label="რუკის ფენები" title="რუკის ფენები">
-      <img class="layers-icon" src="advanced%20geospatial%20analysis.svg" alt="" aria-hidden="true">
-    </button>
+    <div id="toolbar">
+      <div id="search-box">
+        <div id="search-wrap" class="glass">
+          <button id="search-btn" class="glass-btn" aria-label="ადგილის ძებნა" title="ადგილის ძებნა">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>
+            </svg>
+          </button>
+          <input id="search-input" type="text" autocomplete="off" spellcheck="false"
+                 placeholder="მოძებნეთ ადგილი…" aria-label="ადგილის ძებნა"
+                 role="combobox" aria-expanded="false" aria-controls="search-results">
+        </div>
+        <ul id="search-results" class="glass" role="listbox" aria-label="ძებნის შედეგები"></ul>
+      </div>
+      <button id="panel-toggle-btn" aria-label="რუკის ფენები" title="რუკის ფენები">
+        <img class="layers-icon" src="advanced%20geospatial%20analysis.svg" alt="" aria-hidden="true">
+      </button>
+      <button id="sources-btn" class="glass glass-btn" aria-label="წყაროები და მეთოდოლოგია" title="წყაროები და მეთოდოლოგია">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9.25"/><path d="M12 11v5.5"/><path d="M12 7.75v.5"/>
+        </svg>
+      </button>
+    </div>
     <div id="layer-panel">
       <div class="layer-scroll-area" id="layer-list"></div>
       <button id="split-btn" disabled>შედარების ჩართვა</button>
+    </div>
+  </div>
+
+  <div id="sources-overlay" hidden>
+    <div id="sources-dialog" role="dialog" aria-modal="true" aria-labelledby="sources-title">
+      <button id="sources-close" aria-label="დახურვა">&times;</button>
+      <h2 id="sources-title">წყაროები და მეთოდოლოგია</h2>
+
+      <h3>ისტორიული ტოპოგრაფიული რუკები</h3>
+      <p>საბჭოთა პერიოდის ტოპოგრაფიული რუკები მოწოდებულია სსიპ — საჯარო რეესტრის
+         ეროვნული სააგენტოს (NAPR) WMS სერვისებით, რომლებიც კატალოგიზებულია
+         <a href="https://nsdi.gov.ge/ka/geoportal" target="_blank" rel="noopener">NSDI-ის გეოპორტალზე</a>.</p>
+      <div class="src-table-wrap">
+        <table>
+          <thead><tr><th>მასშტაბი</th><th>წელი</th><th>WMS ფენა</th></tr></thead>
+          <tbody id="src-table-body"></tbody>
+        </table>
+      </div>
+      <p>სერვისი: <code>https://mp.napr.gov.ge/&lt;workspace&gt;/ows</code> — WMS 1.1.1, EPSG:3857,
+         256&times;256 ტაილები.</p>
+
+      <h3>სხვა ფენები</h3>
+      <ul>
+        <li><strong>1922 წლის რუკა</strong> — Mapbox-ის რასტრული ტაილსეტი
+            <code>jorjone90.8mob70</code>.</li>
+        <li><strong>საბაზისო რუკა და ლეიბლები</strong> — Mapbox,
+            &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-ის კონტრიბუტორები.</li>
+        <li><strong>რელიეფი</strong> — Mapbox Terrain DEM v1.</li>
+      </ul>
+
+      <h3>მეთოდოლოგია</h3>
+      <ul>
+        <li>ფენები იტვირთება WMS <code>GetMap</code> მოთხოვნებით, პირდაპირ ბრაუზერიდან,
+            EPSG:3857 პროექციაში.</li>
+        <li>თითოეული ფენის გამჭვირვალობა რეგულირდება დამოუკიდებლად, რაც საშუალებას იძლევა
+            სხვადასხვა პერიოდის რუკების ერთმანეთზე დადებით შედარებას.</li>
+        <li>ორი ფენის გვერდიგვერდ შედარება ხდება გადასაწევი ზოლით; რუკების ხედები
+            სინქრონიზებულია.</li>
+        <li>რასტრები იჭრება გადაღების არეალის მიხედვით, სტილში განსაზღვრული
+            <code>soviet_topo_cover</code> მასკით.</li>
+        <li>ძებნა ეყრდნობა Mapbox Geocoding v6 API-ს, საქართველოს ტერიტორიაზე შეზღუდვით.</li>
+      </ul>
+
+      <p class="src-todo">შესავსებია: კვლევის შინაარსობრივი მეთოდოლოგია — ბორდერიზაციის
+         ანალიზის აღწერა, 1922 წლის რუკის ბიბლიოგრაფიული წყარო და მონაცემთა
+         ინტერპრეტაციის პრინციპები.</p>
     </div>
   </div>
 
@@ -177,13 +372,13 @@
     // Studio style and only needs toggling.
     const LAYERS_CONFIG = {
       map1922:   { id: '1922-map',       label: '1922 წლის რუკა',       studio: true },
-      topo10k:   { id: 'wms-topo-10k',   label: 'საბჭოთა ტოპო 1952',    scale: '1:10,000',    ws: 'TOPO_10k_1952_2007',  layer: 'TOPO_10000_1952_2007' },
-      topo25k:   { id: 'wms-topo-25k',   label: 'საბჭოთა ტოპო 1953',    scale: '1:25,000',    ws: 'TOPO_25k_1953-2004',  layer: 'TOPO_25000_1953-2004' },
-      topo50k:   { id: 'wms-topo-50k',   label: 'საბჭოთა ტოპო 1973',    scale: '1:50,000',    ws: 'TOPO_50k_1973-1990',  layer: 'TOPO_50000_1973_1990' },
-      topo100k:  { id: 'wms-topo-100k',  label: 'საბჭოთა ტოპო 1978',    scale: '1:100,000',   ws: 'TOPO_100K_1978_1990', layer: 'TOPO_100000' },
-      topo200k:  { id: 'wms-topo-200k',  label: 'საბჭოთა ტოპო 1981',    scale: '1:200,000',   ws: 'TOPO_200k_1981_1990', layer: 'TOPO_200000' },
-      topo500k:  { id: 'wms-topo-500k',  label: 'საბჭოთა ტოპო 1989',    scale: '1:500,000',   ws: 'TOPO_500k_1989',      layer: 'TOPO_500000' },
-      topo1000k: { id: 'wms-topo-1000k', label: 'საბჭოთა ტოპო 1988',    scale: '1:1,000,000', ws: 'TOPO_1000k_1988-90',  layer: 'TOPO_1000000' }
+      topo10k:   { id: 'wms-topo-10k',   label: 'საბჭოთა ტოპო 1952', year: '1952',    scale: '1:10,000',    ws: 'TOPO_10k_1952_2007',  layer: 'TOPO_10000_1952_2007' },
+      topo25k:   { id: 'wms-topo-25k',   label: 'საბჭოთა ტოპო 1953', year: '1953',    scale: '1:25,000',    ws: 'TOPO_25k_1953-2004',  layer: 'TOPO_25000_1953-2004' },
+      topo50k:   { id: 'wms-topo-50k',   label: 'საბჭოთა ტოპო 1973', year: '1973',    scale: '1:50,000',    ws: 'TOPO_50k_1973-1990',  layer: 'TOPO_50000_1973_1990' },
+      topo100k:  { id: 'wms-topo-100k',  label: 'საბჭოთა ტოპო 1978', year: '1978',    scale: '1:100,000',   ws: 'TOPO_100K_1978_1990', layer: 'TOPO_100000' },
+      topo200k:  { id: 'wms-topo-200k',  label: 'საბჭოთა ტოპო 1981', year: '1981',    scale: '1:200,000',   ws: 'TOPO_200k_1981_1990', layer: 'TOPO_200000' },
+      topo500k:  { id: 'wms-topo-500k',  label: 'საბჭოთა ტოპო 1989', year: '1989',    scale: '1:500,000',   ws: 'TOPO_500k_1989',      layer: 'TOPO_500000' },
+      topo1000k: { id: 'wms-topo-1000k', label: 'საბჭოთა ტოპო 1988', year: '1988',    scale: '1:1,000,000', ws: 'TOPO_1000k_1988-90',  layer: 'TOPO_1000000' }
     };
 
     // The 1922 sheet has no scale, so it falls back to its panel name.
@@ -227,7 +422,10 @@
     const leftLabel = document.getElementById('left-label');
     const rightLabel = document.getElementById('right-label');
 
-    panelToggleBtn.addEventListener('click', () => panelContainer.classList.toggle('collapsed'));
+    panelToggleBtn.addEventListener('click', () => {
+      panelContainer.classList.toggle('collapsed');
+      if (!panelContainer.classList.contains('collapsed')) closeSearch();
+    });
 
     function setupWmsSourcesAndLayers(mapInstance) {
       if (!mapInstance) return;
@@ -345,6 +543,149 @@
         if (rightMap?.getLayer(cfg.id)) rightMap.setPaintProperty(cfg.id, 'raster-opacity', val);
       });
     });
+    /* ================= place search (Mapbox Geocoding v6) ================= */
+    const searchWrap = document.getElementById('search-wrap');
+    const searchBtn = document.getElementById('search-btn');
+    const searchInput = document.getElementById('search-input');
+    const searchResults = document.getElementById('search-results');
+
+    let suggestions = [];
+    let activeIndex = -1;
+    let searchTimer = null;
+    let searchAbort = null;
+    let searchMarkers = [];
+
+    function openSearch() {
+      searchWrap.classList.add('open');
+      panelContainer.classList.add('collapsed');
+      searchInput.focus();
+    }
+
+    function closeSearch() {
+      searchWrap.classList.remove('open');
+      searchInput.value = '';
+      clearSuggestions();
+      searchInput.blur();
+    }
+
+    function clearSuggestions() {
+      suggestions = [];
+      activeIndex = -1;
+      searchResults.innerHTML = '';
+      searchResults.classList.remove('visible');
+      searchInput.setAttribute('aria-expanded', 'false');
+    }
+
+    searchBtn.addEventListener('click', () => {
+      searchWrap.classList.contains('open') ? closeSearch() : openSearch();
+    });
+
+    function renderSuggestions() {
+      if (!suggestions.length) {
+        searchResults.innerHTML = '<li class="empty">ვერ მოიძებნა</li>';
+      } else {
+        searchResults.innerHTML = suggestions.map((r, i) => `
+          <li role="option" data-i="${i}" class="${i === activeIndex ? 'active' : ''}">
+            <span class="r-name"></span><span class="r-context"></span>
+          </li>`).join('');
+        // fill via textContent so place names can never be read as markup
+        searchResults.querySelectorAll('li').forEach(li => {
+          const r = suggestions[Number(li.dataset.i)];
+          li.querySelector('.r-name').textContent = r.name;
+          li.querySelector('.r-context').textContent = r.context;
+        });
+      }
+      searchResults.classList.add('visible');
+      searchInput.setAttribute('aria-expanded', 'true');
+    }
+
+    async function fetchSuggestions(q) {
+      if (searchAbort) searchAbort.abort();
+      searchAbort = new AbortController();
+      const params = new URLSearchParams({
+        q, country: 'ge', language: 'ka', autocomplete: 'true', limit: '6',
+        access_token: mapboxgl.accessToken
+      });
+      const res = await fetch(`https://api.mapbox.com/search/geocode/v6/forward?${params}`,
+                             { signal: searchAbort.signal });
+      if (!res.ok) throw new Error(`geocoding ${res.status}`);
+      const data = await res.json();
+      return (data.features || []).map(f => ({
+        name: f.properties.name || '',
+        context: f.properties.place_formatted || '',
+        center: f.geometry.coordinates
+      }));
+    }
+
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim();
+      clearTimeout(searchTimer);
+      if (q.length < 2) { clearSuggestions(); return; }
+      searchTimer = setTimeout(async () => {
+        try {
+          suggestions = await fetchSuggestions(q);
+          activeIndex = -1;
+          renderSuggestions();
+        } catch (err) {
+          if (err.name !== 'AbortError') console.error('Search failed:', err);
+        }
+      }, 250);
+    });
+
+    searchResults.addEventListener('click', (e) => {
+      const li = e.target.closest('li[data-i]');
+      if (li) selectSuggestion(Number(li.dataset.i));
+    });
+
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { closeSearch(); return; }
+      if (!suggestions.length) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const step = e.key === 'ArrowDown' ? 1 : -1;
+        activeIndex = (activeIndex + step + suggestions.length) % suggestions.length;
+        renderSuggestions();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        selectSuggestion(activeIndex < 0 ? 0 : activeIndex);
+      }
+    });
+
+    function selectSuggestion(i) {
+      const r = suggestions[i];
+      if (!r) return;
+      [leftMap, rightMap].filter(Boolean).forEach(m => m.flyTo({ center: r.center, zoom: 12, essential: true }));
+      searchMarkers.forEach(m => m.remove());
+      searchMarkers = [leftMap, rightMap].filter(Boolean)
+        .map(m => new mapboxgl.Marker({ color: '#d93025' }).setLngLat(r.center).addTo(m));
+      searchInput.value = r.name;
+      clearSuggestions();
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!searchWrap.contains(e.target) && !searchResults.contains(e.target)) {
+        if (searchWrap.classList.contains('open') && !searchInput.value.trim()) closeSearch();
+        else clearSuggestions();
+      }
+    });
+
+    /* ================= sources / methodology dialog ================= */
+    const sourcesOverlay = document.getElementById('sources-overlay');
+
+    // Build the dataset table from the layer config so the two cannot drift apart.
+    document.getElementById('src-table-body').innerHTML = Object.values(LAYERS_CONFIG)
+      .filter(cfg => cfg.scale)
+      .map(cfg => `<tr><td>${cfg.scale}</td><td>${cfg.year}</td><td><code>${cfg.layer}</code></td></tr>`)
+      .join('');
+
+    function openSources() { sourcesOverlay.hidden = false; }
+    function closeSources() { sourcesOverlay.hidden = true; }
+
+    document.getElementById('sources-btn').addEventListener('click', openSources);
+    document.getElementById('sources-close').addEventListener('click', closeSources);
+    sourcesOverlay.addEventListener('click', (e) => { if (e.target === sourcesOverlay) closeSources(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sourcesOverlay.hidden) closeSources(); });
+
   </script>
 </body>
 </html>
