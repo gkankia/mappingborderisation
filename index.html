@@ -936,6 +936,18 @@
     // colon changes the URL the registry receives.
     const REGISTRY = 'https://maps.gov.ge';
 
+    // The record endpoint (getinfo.alpha) is gated: it answers Urbanyx's deployed
+    // origin but refuses this one, and its refusal page carries no CORS header — that
+    // is the console error. Point this at a worker route that fetches it server-side
+    // and the record comes back; leave it empty and the app still shows the cadastral
+    // code and address from the search call, which is not gated.
+    // See cloudflare-worker/registry-route.js for the route to paste.
+    const REGISTRY_PROXY = '';   // e.g. 'https://spring-recipe-402c.gkankia.workers.dev/registry'
+
+    const recordUrl = (lbl, shp) => REGISTRY_PROXY
+      ? `${REGISTRY_PROXY}?lbl=${lbl}${shp ? '&res=shp' : ''}&lang=ka`
+      : `${REGISTRY}/lr/bo/mg/getinfo.alpha?lbl=${lbl}${shp ? '&res=shp' : ''}&lang=ka`;
+
     // From the Urbanyx implementation (registry returns Oracle WKT), with the
     // MultiPolygon nesting corrected — see the note below.
     function wktToGeoJSON(wkt) {
@@ -1026,8 +1038,8 @@
 
       try {
         const [hRes, shpRes] = await Promise.all([
-          fetch(`${REGISTRY}/lr/bo/mg/getinfo.alpha?lbl=${lbl}&lang=ka`),
-          fetch(`${REGISTRY}/lr/bo/mg/getinfo.alpha?lbl=${lbl}&res=shp&lang=ka`)
+          fetch(recordUrl(lbl, false)),
+          fetch(recordUrl(lbl, true))
         ]);
         if (!hRes.ok || !shpRes.ok) return base;
         const html = await hRes.text();
