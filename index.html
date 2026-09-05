@@ -927,22 +927,122 @@
       return out;
     }
 
+    // Same shape as the Urbanyx implementation, and deliberately so: the calls go
+    // straight from the browser, which is what makes them work. maps.gov.ge is behind
+    // a WAF that turns away datacenter traffic — a server-side proxy from Netlify gets
+    // the "Access Denied" page (which carries no CORS header, hence the earlier error),
+    // while a direct fetch arrives from the visitor's own IP and is served normally.
+    // The label is interpolated raw, exactly as Urbanyx does; percent-encoding its
+    // colon changes the URL the registry receives.
+    const REGISTRY = 'https://maps.gov.ge';
+
+    // From the Urbanyx implementation (registry returns Oracle WKT), with the
+    // MultiPolygon nesting corrected — see the note below.
+    function wktToGeoJSON(wkt) {
+      if (!wkt) return null;
+      wkt = wkt.trim();
+      try {
+        if (wkt.startsWith('MULTIPOLYGON')) {
+          const polys = [];
+          const inner = wkt.slice(13).trim();
+          let depth = 0, ringStart = -1, curPoly = [];
+          for (let i = 0; i < inner.length; i++) {
+            const c = inner[i];
+            if (c === '(') { depth++; if (depth === 3) ringStart = i + 1; }
+            else if (c === ')') {
+              if (depth === 3 && ringStart !== -1) {
+                curPoly.push(inner.slice(ringStart, i).split(',').map(pt => {
+                  const [x, y] = pt.trim().split(' '); return [+x, +y];
+                }));
+                ringStart = -1;
+              }
+              if (depth === 2) { polys.push(curPoly); curPoly = []; }
+              depth--;
+            }
+          }
+          // Upstream writes `polys.map(r => [r])` here, which wraps each polygon one
+          // level too deep — GeoJSON wants coordinates[i] to be the ring list itself.
+          // Simple POLYGONs dominate the registry, so the bug rarely shows.
+          return { type: 'MultiPolygon', coordinates: polys };
+        }
+        if (wkt.startsWith('POLYGON')) {
+          const rings = []; const inner = wkt.slice(7).trim();
+          let depth = 0, ringStart = -1;
+          for (let i = 0; i < inner.length; i++) {
+            const c = inner[i];
+            if (c === '(') { depth++; if (depth === 2) ringStart = i + 1; }
+            else if (c === ')') {
+              if (depth === 2 && ringStart !== -1) {
+                rings.push(inner.slice(ringStart, i).split(',').map(pt => {
+                  const [x, y] = pt.trim().split(' '); return [+x, +y];
+                }));
+                ringStart = -1;
+              }
+              depth--;
+            }
+          }
+          return { type: 'Polygon', coordinates: rings };
+        }
+      } catch (err) { console.warn('wkt parse', err); }
+      return null;
+    }
+
     async function lookupParcel(map, lngLat) {
-      // Both legs run in netlify/functions/registry-info.js: the record endpoint is
-      // WAF-gated and answers cross-origin callers without any CORS header, and it
-      // resolves its label against the session that ran the search, so the two calls
-      // have to share one server-side session.
-      const params = new URLSearchParams({
-        lng: lngLat.lng, lat: lngLat.lat, zoom: Math.round(map.getZoom()), lang: 'ka'
+      const form = new FormData();
+      const d = 0.0025;
+      form.append('keyword', `${lngLat.lng},${lngLat.lat}`);
+      form.append('keyword_description[coords][]', lngLat.lng);
+      form.append('keyword_description[coords][]', lngLat.lat);
+      form.append('keyword_description[bbox][]', lngLat.lng - d);
+      form.append('keyword_description[bbox][]', lngLat.lat - d);
+      form.append('keyword_description[bbox][]', lngLat.lng + d);
+      form.append('keyword_description[bbox][]', lngLat.lat + d);
+      form.append('keyword_description[zoom]', Math.round(map.getZoom()));
+      form.append('keyword_description[lang]', 'ka');
+      form.append('keyword_description[layers][]', 92);
+      form.append('keyword_description[layers][]', 97);
+      form.append('keyword_description[getinfo_type]', 'click');
+
+      const sRes = await fetch(`${REGISTRY}/map/portal/search`, { method: 'POST', body: form });
+      if (!sRes.ok) throw new Error(`search_${sRes.status}`);
+      const sData = await sRes.json();
+      // The same call also returns registration borders and district sectors —
+      // keep only genuine parcels.
+      const item = (sData.result || []).find(r => /lbl=lr_parcels:/.test(r.details?.info_link || ''));
+      if (!item) return null;
+      const lbl = item.details.info_link.split('lbl=')[1];
+
+      const [hRes, shpRes] = await Promise.all([
+        fetch(`${REGISTRY}/lr/bo/mg/getinfo.alpha?lbl=${lbl}&lang=ka`),
+        fetch(`${REGISTRY}/lr/bo/mg/getinfo.alpha?lbl=${lbl}&res=shp&lang=ka`)
+      ]);
+      if (!hRes.ok || !shpRes.ok) throw new Error('fetch_fail');
+      const html = await hRes.text();
+      const shpData = await shpRes.json().catch(() => ({}));
+      const shape = shpData.data?.[0]?.shape;
+
+      return {
+        code: item.name || shpData.data?.[0]?.name || lbl,
+        link: `${REGISTRY}${item.details.info_link}`,
+        geometry: shape ? wktToGeoJSON(shape) : null,
+        ...parseParcelAttrs(html)
+      };
+    }
+
+    // Outline of the parcel that was just clicked.
+    function showParcelOutline(map, geometry) {
+      const src = map.getSource('clicked-parcel');
+      const data = geometry
+        ? { type: 'Feature', geometry, properties: {} }
+        : { type: 'FeatureCollection', features: [] };
+      if (src) { src.setData(data); return; }
+      map.addSource('clicked-parcel', { type: 'geojson', data });
+      map.addLayer({
+        id: 'clicked-parcel-line',
+        type: 'line',
+        source: 'clicked-parcel',
+        paint: { 'line-color': '#d93025', 'line-width': 2.5, 'line-opacity': 0.95 }
       });
-      const res = await fetch(`/api/registry-info?${params}`);
-      if (res.status === 404) return null;                       // nothing registered here
-      if (!res.ok) {
-        const reason = await res.json().catch(() => ({}));
-        throw new Error(reason.error || `registry_${res.status}`);
-      }
-      const { code, link, html } = await res.json();
-      return { code, link, ...parseParcelAttrs(html) };
     }
 
     // Built as DOM rather than an HTML string: every value here comes from the
@@ -957,7 +1057,6 @@
           zoom: 'მიუახლოვდით რუკას ნაკვეთების სანახავად',
           none: 'აქ რეგისტრირებული ნაკვეთი არ მოიძებნა',
           loading: 'იტვირთება…',
-          denied: 'საჯარო რეესტრი ამჟამად არ პასუხობს — სცადეთ ხელახლა',
           error: 'რეესტრიდან მონაცემების წამოღება ვერ მოხერხდა'
         }[state] || '';
         box.appendChild(msg);
@@ -1005,10 +1104,12 @@
         if (map.getZoom() < PARCEL_MIN_ZOOM) return;
         try {
           const parcel = await lookupParcel(map, e.lngLat);
+          showParcelOutline(map, parcel && parcel.geometry);
           show(parcel ? 'ok' : 'none', parcel);
         } catch (err) {
+          showParcelOutline(map, null);
           console.error('Parcel lookup failed:', err);
-          show(err.message === 'registry_denied' ? 'denied' : 'error');
+          show('error');
         }
       });
 

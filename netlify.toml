@@ -8,8 +8,3 @@
   from = "/api/wms-proxy"
   to = "/.netlify/functions/wms-proxy"
   status = 200
-
-[[redirects]]
-  from = "/api/registry-info"
-  to = "/.netlify/functions/registry-info"
-  status = 200
