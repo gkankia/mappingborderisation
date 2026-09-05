@@ -1038,6 +1038,21 @@
       };
 
       // Enrichment: owner, registration date, area, type and geometry.
+      //
+      // Direct first. The registry's /lr/ path — the one carrying owner data — only
+      // answers a real browser on an allowlisted origin: measured from this machine,
+      // /map/portal/* and /ar/mg/* are served with ACAO:* while /lr/bo/mg/* is refused
+      // outright, from the same address the browser uses. So on a domain the registry
+      // recognises this simply works, exactly as it does for Urbanyx; anywhere else it
+      // is refused and we fall back to the proxy, then to the search result.
+      const lbl = item.details.info_link.split('lbl=')[1];
+      try {
+        const rec = await fetchRecordDirect(lbl);
+        if (rec) return mergeRecord(base, rec.html, rec.shp);
+      } catch (err) {
+        // CORS refusal on this origin — expected off the allowlisted domain.
+      }
+
       try {
         const params = new URLSearchParams({
           lng: lngLat.lng, lat: lngLat.lat, zoom: Math.round(map.getZoom()), lang: 'ka'
@@ -1046,18 +1061,33 @@
         if (!rRes.ok) return base;
         const rec = await rRes.json();
         if (!rec.html) return base;
-
-        const attrs = parseParcelAttrs(rec.html);
-        const shape = rec.shp?.data?.[0]?.shape;
-        const merged = { ...base, partial: false, geometry: shape ? wktToGeoJSON(shape) : null };
-        // never let an empty field from the record blank out what search gave us
-        Object.entries(attrs).forEach(([k, v]) => { if (v) merged[k] = v; });
-        if (rec.code) merged.code = rec.code;
-        return merged;
+        return mergeRecord(base, rec.html, rec.shp, rec.code);
       } catch (err) {
         console.warn('Registry record unavailable, showing search result only:', err);
         return base;
       }
+    }
+
+    // Straight to the registry, the way Urbanyx does it — raw label, no proxy.
+    async function fetchRecordDirect(lbl) {
+      const [hRes, shpRes] = await Promise.all([
+        fetch(`${REGISTRY}/lr/bo/mg/getinfo.alpha?lbl=${lbl}&lang=ka`),
+        fetch(`${REGISTRY}/lr/bo/mg/getinfo.alpha?lbl=${lbl}&res=shp&lang=ka`)
+      ]);
+      if (!hRes.ok || !shpRes.ok) return null;
+      const html = await hRes.text();
+      if (!/bg-blue-100/.test(html)) return null;      // empty wrapper, not a record
+      return { html, shp: await shpRes.json().catch(() => null) };
+    }
+
+    function mergeRecord(base, html, shp, code) {
+      const attrs = parseParcelAttrs(html);
+      const shape = shp?.data?.[0]?.shape;
+      const merged = { ...base, partial: false, geometry: shape ? wktToGeoJSON(shape) : null };
+      // never let an empty field from the record blank out what search gave us
+      Object.entries(attrs).forEach(([k, v]) => { if (v) merged[k] = v; });
+      if (code) merged.code = code;
+      return merged;
     }
 
     // Outline of the parcel that was just clicked.
