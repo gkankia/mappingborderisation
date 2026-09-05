@@ -945,22 +945,14 @@
       return out;
     }
 
-    // The record endpoint (getinfo.alpha) is gated: it answers Urbanyx's deployed
-    // origin but refuses this one, and its refusal page carries no CORS header — that
-    // is the console error. It therefore goes through our own edge function
-    // (netlify/edge-functions/registry.js), which fetches it server-side and so
-    // sidesteps the browser's CORS check. If that is refused as well, the app still
-    // shows the cadastral code and address from the search call, which is not gated.
-    // Set this to '' to go direct again.
+    // The point search answers the browser directly, so the cadastral code and address
+    // are always available. The record itself (area, owner, registration date, geometry)
+    // cannot be fetched from here: its refusal page carries no CORS header, and it only
+    // resolves a label inside the session that produced it. Both of those are handled in
+    // netlify/edge-functions/registry.js, which is treated as enrichment — if it is
+    // refused, the popup still shows code and address.
     const REGISTRY = 'https://maps.gov.ge';
-    const REGISTRY_PROXY = '/api/registry';
-
-    // Labels are Oracle ROWIDs and can contain '+' and '/'. Going to our own proxy the
-    // label MUST be percent-encoded, or URLSearchParams decodes the '+' as a space.
-    // Going direct it stays raw, matching Urbanyx.
-    const recordUrl = (lbl, shp) => REGISTRY_PROXY
-      ? `${REGISTRY_PROXY}?lbl=${encodeURIComponent(lbl)}${shp ? '&res=shp' : ''}&lang=ka`
-      : `${REGISTRY}/lr/bo/mg/getinfo.alpha?lbl=${lbl}${shp ? '&res=shp' : ''}&lang=ka`;
+    const RECORD_API = '/api/registry';
 
     // From the Urbanyx implementation (registry returns Oracle WKT), with the
     // MultiPolygon nesting corrected — see the note below.
@@ -1036,35 +1028,31 @@
       // keep only genuine parcels.
       const item = (sData.result || []).find(r => /lbl=lr_parcels:/.test(r.details?.info_link || ''));
       if (!item) return null;
-      const lbl = item.details.info_link.split('lbl=')[1];
 
-      // The search already carries the cadastral code and address, and it answers
-      // this origin. The record endpoint is origin-gated and may not, so treat it as
-      // an enrichment: if it is refused we still show what we have rather than an
-      // error. `partial` tells the popup to say so.
       const base = {
-        code: item.name || lbl,
+        code: item.name || '',
         address: item.descript || '',
         link: `${REGISTRY}${item.details.info_link}`,
         geometry: null,
         partial: true
       };
 
+      // Enrichment: owner, registration date, area, type and geometry.
       try {
-        const [hRes, shpRes] = await Promise.all([
-          fetch(recordUrl(lbl, false)),
-          fetch(recordUrl(lbl, true))
-        ]);
-        if (!hRes.ok || !shpRes.ok) return base;
-        const html = await hRes.text();
-        const shpData = await shpRes.json().catch(() => ({}));
-        const shape = shpData.data?.[0]?.shape;
+        const params = new URLSearchParams({
+          lng: lngLat.lng, lat: lngLat.lat, zoom: Math.round(map.getZoom()), lang: 'ka'
+        });
+        const rRes = await fetch(`${RECORD_API}?${params}`);
+        if (!rRes.ok) return base;
+        const rec = await rRes.json();
+        if (!rec.html) return base;
 
-        const attrs = parseParcelAttrs(html);
+        const attrs = parseParcelAttrs(rec.html);
+        const shape = rec.shp?.data?.[0]?.shape;
         const merged = { ...base, partial: false, geometry: shape ? wktToGeoJSON(shape) : null };
         // never let an empty field from the record blank out what search gave us
         Object.entries(attrs).forEach(([k, v]) => { if (v) merged[k] = v; });
-        if (shpData.data?.[0]?.name) merged.code = shpData.data[0].name;
+        if (rec.code) merged.code = rec.code;
         return merged;
       } catch (err) {
         console.warn('Registry record unavailable, showing search result only:', err);

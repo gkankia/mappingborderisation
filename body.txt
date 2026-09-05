@@ -1,0 +1,1 @@
+{"error":"registry_denied","upstreamStatus":200}
