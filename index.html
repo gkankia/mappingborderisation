@@ -924,17 +924,26 @@
       });
       out.owners = [...doc.querySelectorAll('.divide-y.text-gray-800 p')]
         .map(el => el.textContent.trim()).filter(Boolean).join(', ');
+
+      // Registration date: the newest extract ("ამონაწერი") listed against the parcel.
+      // Dates come through as DD.MM.YYYY, so compare as ISO and keep the latest.
+      let latest = null;
+      doc.querySelectorAll('label.expandable').forEach(label => {
+        const heading = label.querySelector('span.flex-1')?.textContent?.trim() || '';
+        if (!heading.includes('ამონაწერი')) return;
+        label.querySelectorAll("a[href*='GetBlob']").forEach(a => {
+          const dateStr = a.querySelector('span.font-light')?.textContent?.trim() || '';
+          if (!dateStr) return;
+          const [d, m, y] = dateStr.split('.');
+          if (!d || !m || !y) return;
+          const iso = `${y}-${m}-${d}`;
+          if (!latest || iso > latest.iso) latest = { iso, display: dateStr, href: a.getAttribute('href') || '' };
+        });
+      });
+      out.regDate = latest ? latest.display : '';
+      out.registryDocUrl = latest ? latest.href : '';
       return out;
     }
-
-    // Same shape as the Urbanyx implementation, and deliberately so: the calls go
-    // straight from the browser, which is what makes them work. maps.gov.ge is behind
-    // a WAF that turns away datacenter traffic — a server-side proxy from Netlify gets
-    // the "Access Denied" page (which carries no CORS header, hence the earlier error),
-    // while a direct fetch arrives from the visitor's own IP and is served normally.
-    // The label is interpolated raw, exactly as Urbanyx does; percent-encoding its
-    // colon changes the URL the registry receives.
-    const REGISTRY = 'https://maps.gov.ge';
 
     // The record endpoint (getinfo.alpha) is gated: it answers Urbanyx's deployed
     // origin but refuses this one, and its refusal page carries no CORS header — that
@@ -945,8 +954,11 @@
     // Set this to '' to go direct again.
     const REGISTRY_PROXY = '/api/registry';
 
+    // Labels are Oracle ROWIDs and can contain '+' and '/'. Going to our own proxy the
+    // label MUST be percent-encoded, or URLSearchParams decodes the '+' as a space.
+    // Going direct it stays raw, matching Urbanyx.
     const recordUrl = (lbl, shp) => REGISTRY_PROXY
-      ? `${REGISTRY_PROXY}?lbl=${lbl}${shp ? '&res=shp' : ''}&lang=ka`
+      ? `${REGISTRY_PROXY}?lbl=${encodeURIComponent(lbl)}${shp ? '&res=shp' : ''}&lang=ka`
       : `${REGISTRY}/lr/bo/mg/getinfo.alpha?lbl=${lbl}${shp ? '&res=shp' : ''}&lang=ka`;
 
     // From the Urbanyx implementation (registry returns Oracle WKT), with the
@@ -1096,11 +1108,12 @@
       h.textContent = parcel.code;
       box.appendChild(h);
       const dl = document.createElement('dl');
-      [['ფართობი', parcel.area && `${parcel.area} კვ.მ.`],
+      [['მისამართი', parcel.address],
+       ['მესაკუთრე', parcel.owners],
+       ['რეგისტრაცია', parcel.regDate],
+       ['ფართობი', parcel.area && `${parcel.area} კვ.მ.`],
        ['ტიპი', parcel.parcelType],
-       ['მისამართი', parcel.address],
-       ['საკუთრება', parcel.ownershipType],
-       ['მესაკუთრე', parcel.owners]].forEach(([label, value]) => {
+       ['საკუთრება', parcel.ownershipType]].forEach(([label, value]) => {
         if (!value) return;
         const dt = document.createElement('dt'); dt.textContent = label;
         const dd = document.createElement('dd'); dd.textContent = value;

@@ -24,13 +24,18 @@ const fail = (error, status = 502, extra = {}) =>
 
 export default async (request) => {
   const url = new URL(request.url);
-  const lbl = url.searchParams.get('lbl') || '';
+  // Labels are Oracle ROWIDs containing '+' and '/'. A '+' arriving unencoded has
+  // already been decoded to a space by the time we read it, so put it back before
+  // validating — otherwise perfectly good labels are rejected.
+  const lbl = (url.searchParams.get('lbl') || '').replace(/ /g, '+');
   // Registry parcel labels only — this must never become a general-purpose proxy.
-  if (!/^lr_parcels:[A-Za-z0-9+/=_-]{4,64}$/.test(lbl)) return fail('bad_lbl', 400);
+  if (!/^lr_parcels:[A-Za-z0-9+/=_-]{4,64}$/.test(lbl)) return fail('bad_lbl', 400, { lbl });
 
   const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'ka';
   const shp = url.searchParams.get('res') === 'shp';
-  const target = `https://maps.gov.ge/lr/bo/mg/getinfo.alpha?lbl=${lbl}${shp ? '&res=shp' : ''}&lang=${lang}`;
+  // '+' must go upstream as %2B for the same reason; '/' is unambiguous in a query.
+  const target = `https://maps.gov.ge/lr/bo/mg/getinfo.alpha?lbl=${lbl.replace(/\+/g, '%2B')}` +
+                 `${shp ? '&res=shp' : ''}&lang=${lang}`;
 
   try {
     // Prime a session: the WAF in front of the registry issues TS* cookies here.
