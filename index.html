@@ -217,6 +217,27 @@
     .meta-value { font-weight: 600; color: var(--text-main); }
     .opacity-value { min-width: 34px; text-align: right; }
     .meta-note { font-size: 10.5px; color: var(--text-muted); margin: 1px 0 5px; }
+
+    /* drag to restack */
+    #drag-hint {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 10.5px; color: var(--text-muted); margin: 0 2px 9px;
+    }
+    #drag-hint svg { width: 13px; height: 13px; fill: currentColor; flex: 0 0 auto; }
+
+    .drag-handle {
+      flex: 0 0 auto; padding: 4px 0 4px 10px; color: #c4c7ca;
+      cursor: grab; touch-action: none;
+    }
+    .drag-handle:active { cursor: grabbing; }
+    .drag-handle svg { width: 16px; height: 16px; display: block; fill: currentColor; }
+    .control-card:hover .drag-handle { color: #9aa0a6; }
+
+    .control-card { transition: box-shadow 0.18s ease, transform 0.18s ease; }
+    .control-card.dragging {
+      background: #ffffff; cursor: grabbing;
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.20); transform: scale(1.015);
+    }
     .slider-wrapper { display: flex; align-items: center; margin-top: 2px; }
     .opacity-slider { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: #e0e0e0; outline: none; }
     .opacity-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); cursor: pointer; }
@@ -224,6 +245,19 @@
     #split-btn { width: 100%; margin-top: 12px; padding: 10px 14px; border-radius: 10px; border: none; background-color: #e8f0fe; color: var(--primary); font-weight: 600; font-size: 13px; cursor: pointer; }
     #split-btn:disabled { background-color: #f1f3f4; color: #3c4043; opacity: 0.6; cursor: not-allowed; }
     #split-btn.active { background-color: #d93025; color: #ffffff; }
+
+    /* ---- parcel registration popup ----------------------------------- */
+    .parcel-pop { font-size: 12.5px; line-height: 1.5; min-width: 210px; max-width: 280px; }
+    .parcel-pop h4 {
+      margin: 0 0 7px; font-size: 13.5px; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .parcel-pop dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; }
+    .parcel-pop dt { color: var(--text-muted); font-size: 11.5px; white-space: nowrap; }
+    .parcel-pop dd { margin: 0; font-size: 11.5px; font-weight: 500; }
+    .parcel-pop .pp-msg { color: var(--text-muted); }
+    .parcel-pop a { color: var(--primary); font-size: 11.5px; display: inline-block; margin-top: 7px; }
+    .mapboxgl-popup-content { border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); }
 
     /* ---- sources / methodology dialog -------------------------------- */
     #sources-overlay {
@@ -330,6 +364,14 @@
       <img class="layers-icon" src="advanced%20geospatial%20analysis.svg" alt="" aria-hidden="true">
     </button>
     <div id="layer-panel">
+      <div id="drag-hint">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <circle cx="6" cy="4" r="1.35"/><circle cx="10" cy="4" r="1.35"/>
+          <circle cx="6" cy="8" r="1.35"/><circle cx="10" cy="8" r="1.35"/>
+          <circle cx="6" cy="12" r="1.35"/><circle cx="10" cy="12" r="1.35"/>
+        </svg>
+        <span>გადაათრიეთ ფენების გადასაწყობად</span>
+      </div>
       <div class="layer-scroll-area" id="layer-list"></div>
       <button id="split-btn" disabled>შედარების ჩართვა</button>
     </div>
@@ -427,23 +469,22 @@
     // z/x/y -> WMS BBOX proxy (the same worker the Urbanyx app uses).
     const NAPR_TILES = 'https://spring-recipe-402c.gkankia.workers.dev/wms?z={z}&x={x}&y={y}';
 
-    // `label` names the layer in the control panel, `scale` is what the split-view
-    // badge shows, and `order` is DRAW order — deliberately independent of panel
-    // order, since satellite has to sit under the historical sheets and parcels on
-    // top of them while the panel lists both last. `studio: true` means the layer is
-    // already in the Studio style and only needs toggling.
+    // The panel IS the layer stack: the order of these entries is the order of the
+    // cards, and the top card draws on top of the map. Dragging a card rewrites both.
+    // `scale` is what the split-view badge shows; `studio: true` means the layer is
+    // already defined in the Studio style and needs no source of its own.
     const LAYERS_CONFIG = {
+      parcels:   { id: 'napr-parcels',   label: 'საკადასტრო ნაკვეთები',    tileUrl: NAPR_TILES, minzoom: 14,
+                   note: 'NAPR — ხილულია მე-14 მასშტაბიდან' },
       map1922:   { id: '1922-map',       label: '1922 წლის რუკა',          studio: true },
-      topo10k:   { id: 'wms-topo-10k',   label: 'საბჭოთა ტოპო 1952',       year: '1952', scale: '1:10,000',    order: 10, ws: 'TOPO_10k_1952_2007',  layer: 'TOPO_10000_1952_2007' },
-      topo25k:   { id: 'wms-topo-25k',   label: 'საბჭოთა ტოპო 1953',       year: '1953', scale: '1:25,000',    order: 20, ws: 'TOPO_25k_1953-2004',  layer: 'TOPO_25000_1953-2004' },
-      topo50k:   { id: 'wms-topo-50k',   label: 'საბჭოთა ტოპო 1973',       year: '1973', scale: '1:50,000',    order: 30, ws: 'TOPO_50k_1973-1990',  layer: 'TOPO_50000_1973_1990' },
-      topo100k:  { id: 'wms-topo-100k',  label: 'საბჭოთა ტოპო 1978',       year: '1978', scale: '1:100,000',   order: 40, ws: 'TOPO_100K_1978_1990', layer: 'TOPO_100000' },
-      topo200k:  { id: 'wms-topo-200k',  label: 'საბჭოთა ტოპო 1981',       year: '1981', scale: '1:200,000',   order: 50, ws: 'TOPO_200k_1981_1990', layer: 'TOPO_200000' },
-      topo500k:  { id: 'wms-topo-500k',  label: 'საბჭოთა ტოპო 1989',       year: '1989', scale: '1:500,000',   order: 60, ws: 'TOPO_500k_1989',      layer: 'TOPO_500000' },
-      topo1000k: { id: 'wms-topo-1000k', label: 'საბჭოთა ტოპო 1988',       year: '1988', scale: '1:1,000,000', order: 70, ws: 'TOPO_1000k_1988-90',  layer: 'TOPO_1000000' },
-      satellite: { id: 'sat-imagery',    label: 'სატელიტური გამოსახულება', order: 0,  mapboxTileset: 'mapbox://mapbox.satellite' },
-      parcels:   { id: 'napr-parcels',   label: 'საკადასტრო ნაკვეთები',    order: 90, tileUrl: NAPR_TILES, minzoom: 14,
-                   note: 'NAPR — ხილულია მე-14 მასშტაბიდან' }
+      topo10k:   { id: 'wms-topo-10k',   label: 'საბჭოთა ტოპო 1952',       year: '1952', scale: '1:10,000',    ws: 'TOPO_10k_1952_2007',  layer: 'TOPO_10000_1952_2007' },
+      topo25k:   { id: 'wms-topo-25k',   label: 'საბჭოთა ტოპო 1953',       year: '1953', scale: '1:25,000',    ws: 'TOPO_25k_1953-2004',  layer: 'TOPO_25000_1953-2004' },
+      topo50k:   { id: 'wms-topo-50k',   label: 'საბჭოთა ტოპო 1973',       year: '1973', scale: '1:50,000',    ws: 'TOPO_50k_1973-1990',  layer: 'TOPO_50000_1973_1990' },
+      topo100k:  { id: 'wms-topo-100k',  label: 'საბჭოთა ტოპო 1978',       year: '1978', scale: '1:100,000',   ws: 'TOPO_100K_1978_1990', layer: 'TOPO_100000' },
+      topo200k:  { id: 'wms-topo-200k',  label: 'საბჭოთა ტოპო 1981',       year: '1981', scale: '1:200,000',   ws: 'TOPO_200k_1981_1990', layer: 'TOPO_200000' },
+      topo500k:  { id: 'wms-topo-500k',  label: 'საბჭოთა ტოპო 1989',       year: '1989', scale: '1:500,000',   ws: 'TOPO_500k_1989',      layer: 'TOPO_500000' },
+      topo1000k: { id: 'wms-topo-1000k', label: 'საბჭოთა ტოპო 1988',       year: '1988', scale: '1:1,000,000', ws: 'TOPO_1000k_1988-90',  layer: 'TOPO_1000000' },
+      satellite: { id: 'sat-imagery',    label: 'სატელიტური გამოსახულება', mapboxTileset: 'mapbox://mapbox.satellite' }
     };
 
     // The 1922 sheet has no scale, so it falls back to its panel name.
@@ -451,18 +492,26 @@
 
     // Derive the control ids from the key so markup and config cannot drift apart.
     Object.entries(LAYERS_CONFIG).forEach(([key, cfg]) => {
+      cfg.key = key;
       cfg.toggleId = `toggle-${key}`;
       cfg.opacityId = `opacity-${key}`;
       cfg.valId = `val-${key}`;
     });
 
     document.getElementById('layer-list').innerHTML = Object.values(LAYERS_CONFIG).map(cfg => `
-      <div class="control-card">
+      <div class="control-card" data-key="${cfg.key}">
         <div class="layer-header">
           <div class="layer-title-group">
             <label class="switch"><input type="checkbox" id="${cfg.toggleId}"><span class="slider-switch"></span></label>
             <span class="layer-name">${cfg.label}</span>
           </div>
+          <span class="drag-handle" title="გადაათრიეთ გადასაწყობად" aria-hidden="true">
+            <svg viewBox="0 0 16 16">
+              <circle cx="6" cy="4" r="1.35"/><circle cx="10" cy="4" r="1.35"/>
+              <circle cx="6" cy="8" r="1.35"/><circle cx="10" cy="8" r="1.35"/>
+              <circle cx="6" cy="12" r="1.35"/><circle cx="10" cy="12" r="1.35"/>
+            </svg>
+          </span>
         </div>
         <div class="layer-meta">
           ${cfg.scale ? `<div class="meta-row">
@@ -524,27 +573,30 @@
 
     function setupWmsSourcesAndLayers(mapInstance) {
       if (!mapInstance) return;
-      // Anchor every raster below the cover fill so that fill stays on top, adding
-      // them lowest-first so `order` decides which draws above which.
+      // Everything is anchored below the cover fill so that fill keeps drawing on
+      // top. Added bottom-of-the-panel first: each new layer lands directly under
+      // the anchor, i.e. above the one before it, so the finished stack matches the
+      // card order. The Studio layer joins the same stack so it can be dragged too.
       const beforeId = mapInstance.getLayer(COVER_FILL_LAYER) ? COVER_FILL_LAYER : undefined;
-      Object.values(LAYERS_CONFIG)
-        .filter(cfg => !cfg.studio)          // already present in the Studio style
-        .sort((a, b) => a.order - b.order)
-        .forEach(cfg => {
-          const sourceId = `${cfg.id}-src`;
-          if (!mapInstance.getSource(sourceId)) {
-            mapInstance.addSource(sourceId, sourceSpecFor(cfg));
-          }
-          if (!mapInstance.getLayer(cfg.id)) {
-            mapInstance.addLayer({
-              id: cfg.id,
-              type: 'raster',
-              source: sourceId,
-              layout: { visibility: 'none' },
-              paint: { 'raster-opacity': 1.0 }
-            }, beforeId);
-          }
-        });
+      Object.values(LAYERS_CONFIG).slice().reverse().forEach(cfg => {
+        if (cfg.studio) {
+          if (mapInstance.getLayer(cfg.id)) mapInstance.moveLayer(cfg.id, beforeId);
+          return;
+        }
+        const sourceId = `${cfg.id}-src`;
+        if (!mapInstance.getSource(sourceId)) {
+          mapInstance.addSource(sourceId, sourceSpecFor(cfg));
+        }
+        if (!mapInstance.getLayer(cfg.id)) {
+          mapInstance.addLayer({
+            id: cfg.id,
+            type: 'raster',
+            source: sourceId,
+            layout: { visibility: 'none' },
+            paint: { 'raster-opacity': 1.0 }
+          }, beforeId);
+        }
+      });
     }
 
     leftMap.on('style.load', () => {
@@ -552,9 +604,68 @@
       setupWmsSourcesAndLayers(leftMap);
     });
 
-    function getSelectedKeys() {
-      return Object.keys(LAYERS_CONFIG).filter(key => document.getElementById(LAYERS_CONFIG[key].toggleId)?.checked);
+    const layerList = document.getElementById('layer-list');
+
+    // Read the cards, not the config: after a drag the DOM is the source of truth,
+    // so the topmost selected card is the one shown on the left half.
+    function cardKeys() {
+      return [...layerList.querySelectorAll('.control-card')].map(c => c.dataset.key);
     }
+
+    function getSelectedKeys() {
+      return cardKeys().filter(key => document.getElementById(LAYERS_CONFIG[key].toggleId)?.checked);
+    }
+
+    /* ================= drag to restack ================= */
+    let dragCard = null;
+
+    function applyCardOrderToMaps() {
+      const keys = cardKeys();
+      [leftMap, rightMap].filter(Boolean).forEach(m => {
+        // No isStyleLoaded() gate here: it reports false while tiles are still in
+        // flight, which would silently skip the restack. getLayer is the real test.
+        const anchor = m.getLayer(COVER_FILL_LAYER) ? COVER_FILL_LAYER : undefined;
+        // bottom card first: each move parks the layer under the anchor, above the
+        // one moved before it, so the stack ends up in card order
+        keys.slice().reverse().forEach(key => {
+          const id = LAYERS_CONFIG[key].id;
+          if (!m.getLayer(id)) return;
+          try { m.moveLayer(id, anchor); } catch (err) { console.warn('restack', id, err); }
+        });
+      });
+    }
+
+    layerList.addEventListener('pointerdown', (e) => {
+      const handle = e.target.closest('.drag-handle');
+      if (!handle) return;
+      dragCard = handle.closest('.control-card');
+      dragCard.classList.add('dragging');
+      handle.setPointerCapture(e.pointerId);
+      e.preventDefault();          // stop the panel scrolling under a touch drag
+    });
+
+    layerList.addEventListener('pointermove', (e) => {
+      if (!dragCard) return;
+      e.preventDefault();
+      const others = [...layerList.querySelectorAll('.control-card:not(.dragging)')];
+      const next = others.find(c => {
+        const r = c.getBoundingClientRect();
+        return e.clientY < r.top + r.height / 2;
+      });
+      if (next) layerList.insertBefore(dragCard, next);
+      else layerList.appendChild(dragCard);
+    });
+
+    function endDrag() {
+      if (!dragCard) return;
+      dragCard.classList.remove('dragging');
+      dragCard = null;
+      applyCardOrderToMaps();
+      if (isSplitActive) applySplitVisibilities(getSelectedKeys());
+    }
+
+    layerList.addEventListener('pointerup', endDrag);
+    layerList.addEventListener('pointercancel', endDrag);
 
     function updateUIState() {
       if (!isLeftLoaded) return;
@@ -594,6 +705,7 @@
           zoom: leftMap.getZoom(),
           attributionControl: false
         });
+        attachParcelClick(rightMap);
         rightMap.once('style.load', () => {
           setupWmsSourcesAndLayers(rightMap);
           applySplitVisibilities(selectedKeys);
@@ -785,6 +897,145 @@
     document.getElementById('sources-close').addEventListener('click', closeSources);
     sourcesOverlay.addEventListener('click', (e) => { if (e.target === sourcesOverlay) closeSources(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sourcesOverlay.hidden) closeSources(); });
+
+    /* ================= NAPR parcel registration lookup ================= */
+    // Mirrors the Urbanyx flow: a point search on the registry returns an
+    // `lr_parcels:` label, which the getinfo endpoint expands into the record.
+    // Both endpoints answer with Access-Control-Allow-Origin: *, but getinfo sits
+    // behind a WAF that rejects requests which do not look like a real browser —
+    // in practice it answers from a deployed https origin and not from localhost.
+    const REGISTRY_HOST = 'https://maps.gov.ge';
+    const PARCEL_MIN_ZOOM = 15;   // NAPR serves individual parcels only from here up
+    let parcelPopup = null;
+
+    function parcelsActive() {
+      return !!document.getElementById(LAYERS_CONFIG.parcels.toggleId)?.checked;
+    }
+
+    function parseParcelAttrs(html) {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const bigs = [...doc.querySelectorAll('.bg-blue-100 .text-lg')];
+      const out = {
+        area: bigs[1] ? bigs[1].textContent.replace(/კვ\.მ\./g, '').trim() : '',
+        parcelType: '', address: '', ownershipType: ''
+      };
+      doc.querySelectorAll('.bg-blue-100 .p-2').forEach(row => {
+        const l = row.querySelector('.text-sm')?.textContent?.trim() || '';
+        const v = row.querySelector('.text-md')?.textContent?.trim() || '';
+        if (l.includes('ნაკვეთის ტიპი')) out.parcelType = v;
+        if (l.includes('მისამართი')) out.address = v;
+        if (l.includes('საკუთრების ტიპი')) out.ownershipType = v;
+      });
+      out.owners = [...doc.querySelectorAll('.divide-y.text-gray-800 p')]
+        .map(el => el.textContent.trim()).filter(Boolean).join(', ');
+      return out;
+    }
+
+    async function lookupParcel(map, lngLat) {
+      const b = map.getBounds();
+      const form = new FormData();
+      form.append('keyword', `${lngLat.lng},${lngLat.lat}`);
+      form.append('keyword_description[coords][]', lngLat.lng);
+      form.append('keyword_description[coords][]', lngLat.lat);
+      form.append('keyword_description[bbox][]', b.getWest());
+      form.append('keyword_description[bbox][]', b.getSouth());
+      form.append('keyword_description[bbox][]', b.getEast());
+      form.append('keyword_description[bbox][]', b.getNorth());
+      form.append('keyword_description[zoom]', map.getZoom());
+      form.append('keyword_description[lang]', 'ka');
+      form.append('keyword_description[layers][]', 92);
+      form.append('keyword_description[layers][]', 97);
+      form.append('keyword_description[getinfo_type]', 'click');
+
+      const res = await fetch(`${REGISTRY_HOST}/map/portal/search`, { method: 'POST', body: form });
+      if (!res.ok) throw new Error(`search_${res.status}`);
+      const data = await res.json();
+      // The same call also returns registration borders and district sectors —
+      // keep only genuine parcels.
+      const item = (data.result || []).find(r => /lbl=lr_parcels:/.test(r.details?.info_link || ''));
+      if (!item) return null;
+
+      const lbl = item.details.info_link.split('lbl=')[1];
+      const info = await fetch(`${REGISTRY_HOST}/lr/bo/mg/getinfo.alpha?lbl=${encodeURIComponent(lbl)}&lang=ka`);
+      if (!info.ok) throw new Error(`info_${info.status}`);
+      const html = await info.text();
+      if (/Access Denied|Oops! Something went wrong/i.test(html)) throw new Error('denied');
+      return { code: item.name || lbl, link: `${REGISTRY_HOST}${item.details.info_link}`, ...parseParcelAttrs(html) };
+    }
+
+    // Built as DOM rather than an HTML string: every value here comes from the
+    // registry, so it goes in as text and can never be parsed as markup.
+    function parcelPopupNode(state, parcel) {
+      const box = document.createElement('div');
+      box.className = 'parcel-pop';
+      if (state !== 'ok') {
+        const msg = document.createElement('div');
+        msg.className = 'pp-msg';
+        msg.textContent = {
+          zoom: 'მიუახლოვდით რუკას ნაკვეთების სანახავად',
+          none: 'აქ რეგისტრირებული ნაკვეთი არ მოიძებნა',
+          loading: 'იტვირთება…',
+          error: 'რეესტრიდან მონაცემების წამოღება ვერ მოხერხდა'
+        }[state] || '';
+        box.appendChild(msg);
+        return box;
+      }
+      const h = document.createElement('h4');
+      h.textContent = parcel.code;
+      box.appendChild(h);
+      const dl = document.createElement('dl');
+      [['ფართობი', parcel.area && `${parcel.area} კვ.მ.`],
+       ['ტიპი', parcel.parcelType],
+       ['მისამართი', parcel.address],
+       ['საკუთრება', parcel.ownershipType],
+       ['მესაკუთრე', parcel.owners]].forEach(([label, value]) => {
+        if (!value) return;
+        const dt = document.createElement('dt'); dt.textContent = label;
+        const dd = document.createElement('dd'); dd.textContent = value;
+        dl.append(dt, dd);
+      });
+      box.appendChild(dl);
+      if (parcel.link) {
+        const a = document.createElement('a');
+        a.href = parcel.link; a.target = '_blank'; a.rel = 'noopener';
+        a.textContent = 'საჯარო რეესტრში ნახვა';
+        box.appendChild(a);
+      }
+      return box;
+    }
+
+    function attachParcelClick(map) {
+      map.on('click', async (e) => {
+        if (!parcelsActive()) return;
+        if (parcelPopup) { parcelPopup.remove(); parcelPopup = null; }
+
+        const show = (state, parcel) => {
+          if (!parcelPopup) return;
+          parcelPopup.setDOMContent(parcelPopupNode(state, parcel));
+        };
+
+        parcelPopup = new mapboxgl.Popup({ closeButton: true, maxWidth: '300px' })
+          .setLngLat(e.lngLat)
+          .setDOMContent(parcelPopupNode(map.getZoom() < PARCEL_MIN_ZOOM ? 'zoom' : 'loading'))
+          .addTo(map);
+
+        if (map.getZoom() < PARCEL_MIN_ZOOM) return;
+        try {
+          const parcel = await lookupParcel(map, e.lngLat);
+          show(parcel ? 'ok' : 'none', parcel);
+        } catch (err) {
+          console.error('Parcel lookup failed:', err);
+          show('error');
+        }
+      });
+
+      // a pointer cursor while the parcel layer is on, so the map reads as clickable
+      map.on('mousemove', () => {
+        map.getCanvas().style.cursor = parcelsActive() ? 'pointer' : '';
+      });
+    }
+
+    attachParcelClick(leftMap);
 
   </script>
 </body>
