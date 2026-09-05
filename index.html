@@ -216,6 +216,7 @@
     .meta-label { color: var(--text-muted); }
     .meta-value { font-weight: 600; color: var(--text-main); }
     .opacity-value { min-width: 34px; text-align: right; }
+    .meta-note { font-size: 10.5px; color: var(--text-muted); margin: 1px 0 5px; }
     .slider-wrapper { display: flex; align-items: center; margin-top: 2px; }
     .opacity-slider { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: #e0e0e0; outline: none; }
     .opacity-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); cursor: pointer; }
@@ -367,6 +368,12 @@
         <li><strong>საბაზისო რუკა და ტოპონიმები</strong> — Z.axis Hillshade Basemap & Mapbox,
             &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-ის კონტრიბუტორები.</li>
         <li><strong>რელიეფი</strong> — Mapbox Terrain</li>
+        <li><strong>სატელიტური გამოსახულება</strong> — Mapbox Satellite
+            (<code>mapbox://mapbox.satellite</code>).</li>
+        <li><strong>საკადასტრო ნაკვეთები</strong> — სსიპ საჯარო რეესტრის ეროვნული
+            სააგენტო (NAPR), <code>nv.napr.gov.ge/geoserver/wms</code>, ფენა
+            <code>cite:LR_PARCELS_transparent</code>. სერვისი CORS-ს არ უჭერს მხარს,
+            ამიტომ ტაილები მოდის z/x/y → WMS BBOX პროქსით.</li>
       </ul>
 
       <h3>რუკის გამოყენება</h3>
@@ -415,20 +422,28 @@
       return `${base}${queryParams.toString()}&BBOX={bbox-epsg-3857}`;
     }
 
-    // `studio: true` means the layer already exists in the Studio style and only
-    // needs toggling; the rest are added as WMS raster sources at runtime.
-    // `label` names the layer in the control panel (survey year); `scale` is what the
-    // split-view badge shows. `studio: true` means the layer already exists in the
-    // Studio style and only needs toggling.
+    // NAPR's parcel service sends no Access-Control-Allow-Origin header, so unlike the
+    // topo services it cannot be fetched from the browser — it goes through this
+    // z/x/y -> WMS BBOX proxy (the same worker the Urbanyx app uses).
+    const NAPR_TILES = 'https://spring-recipe-402c.gkankia.workers.dev/wms?z={z}&x={x}&y={y}';
+
+    // `label` names the layer in the control panel, `scale` is what the split-view
+    // badge shows, and `order` is DRAW order — deliberately independent of panel
+    // order, since satellite has to sit under the historical sheets and parcels on
+    // top of them while the panel lists both last. `studio: true` means the layer is
+    // already in the Studio style and only needs toggling.
     const LAYERS_CONFIG = {
-      map1922:   { id: '1922-map',       label: '1922 წლის რუკა',       studio: true },
-      topo10k:   { id: 'wms-topo-10k',   label: 'საბჭოთა ტოპო 1952', year: '1952',    scale: '1:10,000',    ws: 'TOPO_10k_1952_2007',  layer: 'TOPO_10000_1952_2007' },
-      topo25k:   { id: 'wms-topo-25k',   label: 'საბჭოთა ტოპო 1953', year: '1953',    scale: '1:25,000',    ws: 'TOPO_25k_1953-2004',  layer: 'TOPO_25000_1953-2004' },
-      topo50k:   { id: 'wms-topo-50k',   label: 'საბჭოთა ტოპო 1973', year: '1973',    scale: '1:50,000',    ws: 'TOPO_50k_1973-1990',  layer: 'TOPO_50000_1973_1990' },
-      topo100k:  { id: 'wms-topo-100k',  label: 'საბჭოთა ტოპო 1978', year: '1978',    scale: '1:100,000',   ws: 'TOPO_100K_1978_1990', layer: 'TOPO_100000' },
-      topo200k:  { id: 'wms-topo-200k',  label: 'საბჭოთა ტოპო 1981', year: '1981',    scale: '1:200,000',   ws: 'TOPO_200k_1981_1990', layer: 'TOPO_200000' },
-      topo500k:  { id: 'wms-topo-500k',  label: 'საბჭოთა ტოპო 1989', year: '1989',    scale: '1:500,000',   ws: 'TOPO_500k_1989',      layer: 'TOPO_500000' },
-      topo1000k: { id: 'wms-topo-1000k', label: 'საბჭოთა ტოპო 1988', year: '1988',    scale: '1:1,000,000', ws: 'TOPO_1000k_1988-90',  layer: 'TOPO_1000000' }
+      map1922:   { id: '1922-map',       label: '1922 წლის რუკა',          studio: true },
+      topo10k:   { id: 'wms-topo-10k',   label: 'საბჭოთა ტოპო 1952',       year: '1952', scale: '1:10,000',    order: 10, ws: 'TOPO_10k_1952_2007',  layer: 'TOPO_10000_1952_2007' },
+      topo25k:   { id: 'wms-topo-25k',   label: 'საბჭოთა ტოპო 1953',       year: '1953', scale: '1:25,000',    order: 20, ws: 'TOPO_25k_1953-2004',  layer: 'TOPO_25000_1953-2004' },
+      topo50k:   { id: 'wms-topo-50k',   label: 'საბჭოთა ტოპო 1973',       year: '1973', scale: '1:50,000',    order: 30, ws: 'TOPO_50k_1973-1990',  layer: 'TOPO_50000_1973_1990' },
+      topo100k:  { id: 'wms-topo-100k',  label: 'საბჭოთა ტოპო 1978',       year: '1978', scale: '1:100,000',   order: 40, ws: 'TOPO_100K_1978_1990', layer: 'TOPO_100000' },
+      topo200k:  { id: 'wms-topo-200k',  label: 'საბჭოთა ტოპო 1981',       year: '1981', scale: '1:200,000',   order: 50, ws: 'TOPO_200k_1981_1990', layer: 'TOPO_200000' },
+      topo500k:  { id: 'wms-topo-500k',  label: 'საბჭოთა ტოპო 1989',       year: '1989', scale: '1:500,000',   order: 60, ws: 'TOPO_500k_1989',      layer: 'TOPO_500000' },
+      topo1000k: { id: 'wms-topo-1000k', label: 'საბჭოთა ტოპო 1988',       year: '1988', scale: '1:1,000,000', order: 70, ws: 'TOPO_1000k_1988-90',  layer: 'TOPO_1000000' },
+      satellite: { id: 'sat-imagery',    label: 'სატელიტური გამოსახულება', order: 0,  mapboxTileset: 'mapbox://mapbox.satellite' },
+      parcels:   { id: 'napr-parcels',   label: 'საკადასტრო ნაკვეთები',    order: 90, tileUrl: NAPR_TILES, minzoom: 14,
+                   note: 'NAPR — ხილულია მე-14 მასშტაბიდან' }
     };
 
     // The 1922 sheet has no scale, so it falls back to its panel name.
@@ -458,6 +473,7 @@
             <span class="meta-label">გამჭვირვალობა</span>
             <span id="${cfg.valId}" class="meta-value opacity-value">100%</span>
           </div>
+          ${cfg.note ? `<div class="meta-note">${cfg.note}</div>` : ''}
           <div class="slider-wrapper"><input type="range" id="${cfg.opacityId}" class="opacity-slider" min="0" max="100" value="100"></div>
         </div>
       </div>`).join('');
@@ -487,31 +503,48 @@
       if (!panelContainer.classList.contains('collapsed')) closeSearch();
     });
 
+    function sourceSpecFor(cfg) {
+      // Mapbox-hosted tileset — resolves its own tile URLs from the access token
+      if (cfg.mapboxTileset) {
+        return { type: 'raster', url: cfg.mapboxTileset, tileSize: 256 };
+      }
+      // plain z/x/y raster endpoint (the proxied NAPR parcels)
+      if (cfg.tileUrl) {
+        const spec = { type: 'raster', tiles: [cfg.tileUrl], tileSize: 256, bounds: GEORGIA_BOUNDS };
+        if (cfg.minzoom) spec.minzoom = cfg.minzoom;
+        return spec;
+      }
+      return {
+        type: 'raster',
+        tiles: [buildWmsUrl(cfg.ws, cfg.layer)],
+        tileSize: 256,
+        bounds: GEORGIA_BOUNDS
+      };
+    }
+
     function setupWmsSourcesAndLayers(mapInstance) {
       if (!mapInstance) return;
-      // Anchor every raster below the cover fill so that fill stays on top.
+      // Anchor every raster below the cover fill so that fill stays on top, adding
+      // them lowest-first so `order` decides which draws above which.
       const beforeId = mapInstance.getLayer(COVER_FILL_LAYER) ? COVER_FILL_LAYER : undefined;
-      Object.values(LAYERS_CONFIG).forEach(cfg => {
-        if (cfg.studio) return;   // already present in the Studio style
-        const sourceId = `${cfg.id}-src`;
-        if (!mapInstance.getSource(sourceId)) {
-          mapInstance.addSource(sourceId, {
-            type: 'raster',
-            tiles: [buildWmsUrl(cfg.ws, cfg.layer)],
-            tileSize: 256,
-            bounds: GEORGIA_BOUNDS
-          });
-        }
-        if (!mapInstance.getLayer(cfg.id)) {
-          mapInstance.addLayer({
-            id: cfg.id,
-            type: 'raster',
-            source: sourceId,
-            layout: { visibility: 'none' },
-            paint: { 'raster-opacity': 1.0 }
-          }, beforeId);
-        }
-      });
+      Object.values(LAYERS_CONFIG)
+        .filter(cfg => !cfg.studio)          // already present in the Studio style
+        .sort((a, b) => a.order - b.order)
+        .forEach(cfg => {
+          const sourceId = `${cfg.id}-src`;
+          if (!mapInstance.getSource(sourceId)) {
+            mapInstance.addSource(sourceId, sourceSpecFor(cfg));
+          }
+          if (!mapInstance.getLayer(cfg.id)) {
+            mapInstance.addLayer({
+              id: cfg.id,
+              type: 'raster',
+              source: sourceId,
+              layout: { visibility: 'none' },
+              paint: { 'raster-opacity': 1.0 }
+            }, beforeId);
+          }
+        });
     }
 
     leftMap.on('style.load', () => {
