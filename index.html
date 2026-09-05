@@ -938,11 +938,12 @@
 
     // The record endpoint (getinfo.alpha) is gated: it answers Urbanyx's deployed
     // origin but refuses this one, and its refusal page carries no CORS header — that
-    // is the console error. Point this at a worker route that fetches it server-side
-    // and the record comes back; leave it empty and the app still shows the cadastral
-    // code and address from the search call, which is not gated.
-    // See cloudflare-worker/registry-route.js for the route to paste.
-    const REGISTRY_PROXY = '';   // e.g. 'https://spring-recipe-402c.gkankia.workers.dev/registry'
+    // is the console error. It therefore goes through our own edge function
+    // (netlify/edge-functions/registry.js), which fetches it server-side and so
+    // sidesteps the browser's CORS check. If that is refused as well, the app still
+    // shows the cadastral code and address from the search call, which is not gated.
+    // Set this to '' to go direct again.
+    const REGISTRY_PROXY = '/api/registry';
 
     const recordUrl = (lbl, shp) => REGISTRY_PROXY
       ? `${REGISTRY_PROXY}?lbl=${lbl}${shp ? '&res=shp' : ''}&lang=ka`
