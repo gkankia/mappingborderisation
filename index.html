@@ -899,12 +899,8 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !sourcesOverlay.hidden) closeSources(); });
 
     /* ================= NAPR parcel registration lookup ================= */
-    // Mirrors the Urbanyx flow: a point search on the registry returns an
-    // `lr_parcels:` label, which the getinfo endpoint expands into the record.
-    // Both endpoints answer with Access-Control-Allow-Origin: *, but getinfo sits
-    // behind a WAF that rejects requests which do not look like a real browser —
-    // in practice it answers from a deployed https origin and not from localhost.
-    const REGISTRY_HOST = 'https://maps.gov.ge';
+    // The whole registry lookup happens in our own function — see the comment on
+    // lookupParcel below for why it cannot be done from the browser.
     const PARCEL_MIN_ZOOM = 15;   // NAPR serves individual parcels only from here up
     let parcelPopup = null;
 
@@ -932,35 +928,21 @@
     }
 
     async function lookupParcel(map, lngLat) {
-      const b = map.getBounds();
-      const form = new FormData();
-      form.append('keyword', `${lngLat.lng},${lngLat.lat}`);
-      form.append('keyword_description[coords][]', lngLat.lng);
-      form.append('keyword_description[coords][]', lngLat.lat);
-      form.append('keyword_description[bbox][]', b.getWest());
-      form.append('keyword_description[bbox][]', b.getSouth());
-      form.append('keyword_description[bbox][]', b.getEast());
-      form.append('keyword_description[bbox][]', b.getNorth());
-      form.append('keyword_description[zoom]', map.getZoom());
-      form.append('keyword_description[lang]', 'ka');
-      form.append('keyword_description[layers][]', 92);
-      form.append('keyword_description[layers][]', 97);
-      form.append('keyword_description[getinfo_type]', 'click');
-
-      const res = await fetch(`${REGISTRY_HOST}/map/portal/search`, { method: 'POST', body: form });
-      if (!res.ok) throw new Error(`search_${res.status}`);
-      const data = await res.json();
-      // The same call also returns registration borders and district sectors —
-      // keep only genuine parcels.
-      const item = (data.result || []).find(r => /lbl=lr_parcels:/.test(r.details?.info_link || ''));
-      if (!item) return null;
-
-      const lbl = item.details.info_link.split('lbl=')[1];
-      const info = await fetch(`${REGISTRY_HOST}/lr/bo/mg/getinfo.alpha?lbl=${encodeURIComponent(lbl)}&lang=ka`);
-      if (!info.ok) throw new Error(`info_${info.status}`);
-      const html = await info.text();
-      if (/Access Denied|Oops! Something went wrong/i.test(html)) throw new Error('denied');
-      return { code: item.name || lbl, link: `${REGISTRY_HOST}${item.details.info_link}`, ...parseParcelAttrs(html) };
+      // Both legs run in netlify/functions/registry-info.js: the record endpoint is
+      // WAF-gated and answers cross-origin callers without any CORS header, and it
+      // resolves its label against the session that ran the search, so the two calls
+      // have to share one server-side session.
+      const params = new URLSearchParams({
+        lng: lngLat.lng, lat: lngLat.lat, zoom: Math.round(map.getZoom()), lang: 'ka'
+      });
+      const res = await fetch(`/api/registry-info?${params}`);
+      if (res.status === 404) return null;                       // nothing registered here
+      if (!res.ok) {
+        const reason = await res.json().catch(() => ({}));
+        throw new Error(reason.error || `registry_${res.status}`);
+      }
+      const { code, link, html } = await res.json();
+      return { code, link, ...parseParcelAttrs(html) };
     }
 
     // Built as DOM rather than an HTML string: every value here comes from the
@@ -975,6 +957,7 @@
           zoom: 'მიუახლოვდით რუკას ნაკვეთების სანახავად',
           none: 'აქ რეგისტრირებული ნაკვეთი არ მოიძებნა',
           loading: 'იტვირთება…',
+          denied: 'საჯარო რეესტრი ამჟამად არ პასუხობს — სცადეთ ხელახლა',
           error: 'რეესტრიდან მონაცემების წამოღება ვერ მოხერხდა'
         }[state] || '';
         box.appendChild(msg);
@@ -1025,7 +1008,7 @@
           show(parcel ? 'ok' : 'none', parcel);
         } catch (err) {
           console.error('Parcel lookup failed:', err);
-          show('error');
+          show(err.message === 'registry_denied' ? 'denied' : 'error');
         }
       });
 
