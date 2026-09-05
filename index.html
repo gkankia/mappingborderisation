@@ -1012,21 +1012,38 @@
       if (!item) return null;
       const lbl = item.details.info_link.split('lbl=')[1];
 
-      const [hRes, shpRes] = await Promise.all([
-        fetch(`${REGISTRY}/lr/bo/mg/getinfo.alpha?lbl=${lbl}&lang=ka`),
-        fetch(`${REGISTRY}/lr/bo/mg/getinfo.alpha?lbl=${lbl}&res=shp&lang=ka`)
-      ]);
-      if (!hRes.ok || !shpRes.ok) throw new Error('fetch_fail');
-      const html = await hRes.text();
-      const shpData = await shpRes.json().catch(() => ({}));
-      const shape = shpData.data?.[0]?.shape;
-
-      return {
-        code: item.name || shpData.data?.[0]?.name || lbl,
+      // The search already carries the cadastral code and address, and it answers
+      // this origin. The record endpoint is origin-gated and may not, so treat it as
+      // an enrichment: if it is refused we still show what we have rather than an
+      // error. `partial` tells the popup to say so.
+      const base = {
+        code: item.name || lbl,
+        address: item.descript || '',
         link: `${REGISTRY}${item.details.info_link}`,
-        geometry: shape ? wktToGeoJSON(shape) : null,
-        ...parseParcelAttrs(html)
+        geometry: null,
+        partial: true
       };
+
+      try {
+        const [hRes, shpRes] = await Promise.all([
+          fetch(`${REGISTRY}/lr/bo/mg/getinfo.alpha?lbl=${lbl}&lang=ka`),
+          fetch(`${REGISTRY}/lr/bo/mg/getinfo.alpha?lbl=${lbl}&res=shp&lang=ka`)
+        ]);
+        if (!hRes.ok || !shpRes.ok) return base;
+        const html = await hRes.text();
+        const shpData = await shpRes.json().catch(() => ({}));
+        const shape = shpData.data?.[0]?.shape;
+
+        const attrs = parseParcelAttrs(html);
+        const merged = { ...base, partial: false, geometry: shape ? wktToGeoJSON(shape) : null };
+        // never let an empty field from the record blank out what search gave us
+        Object.entries(attrs).forEach(([k, v]) => { if (v) merged[k] = v; });
+        if (shpData.data?.[0]?.name) merged.code = shpData.data[0].name;
+        return merged;
+      } catch (err) {
+        console.warn('Registry record unavailable, showing search result only:', err);
+        return base;
+      }
     }
 
     // Outline of the parcel that was just clicked.
@@ -1077,6 +1094,13 @@
         dl.append(dt, dd);
       });
       box.appendChild(dl);
+      if (parcel.partial) {
+        const note = document.createElement('div');
+        note.className = 'pp-msg';
+        note.style.marginTop = '7px';
+        note.textContent = 'სრული ჩანაწერი ხელმისაწვდომი არაა — იხილეთ რეესტრში';
+        box.appendChild(note);
+      }
       if (parcel.link) {
         const a = document.createElement('a');
         a.href = parcel.link; a.target = '_blank'; a.rel = 'noopener';
